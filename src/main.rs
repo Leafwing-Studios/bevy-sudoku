@@ -3,9 +3,7 @@ use bevy::{input::system::exit_on_esc_system, prelude::*};
 mod aesthetics;
 mod board;
 mod interaction;
-mod logic;
 mod sudoku_generation;
-mod ui;
 mod utils;
 
 fn main() {
