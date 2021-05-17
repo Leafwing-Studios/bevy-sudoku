@@ -547,8 +547,8 @@ mod sudoku_generation {
     use bevy::utils::HashMap;
     use sudoku::Sudoku;
 
-    pub const FIXED_NUM_FONT: &str = "fonts/FiraSans-Bold.ttf";
-    pub const FILLABLE_NUM_FONT: &str = "fonts/FiraMono-Medium.ttf";
+    pub const FIXED_NUM_FONT: &str = "fonts/Ubuntu-Bold.ttf";
+    pub const FILLABLE_NUM_FONT: &str = "fonts/Ubuntu-Light.ttf";
 
     pub struct GenerationPlugin;
 
