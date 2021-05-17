@@ -15,8 +15,8 @@ pub struct Selected;
 struct CellClick {
     /// Some(entity) if a cell was clicked, otherwise None
     selected_cell: Option<Entity>,
-    /// Was shift held down at the time the event was sent
-    shift: bool,
+    /// Should we select multiple cells at once
+    multi: bool,
 }
 
 // Various colors for our cells
@@ -82,8 +82,10 @@ fn cell_click(
 
         cell_click_events.send(CellClick {
             selected_cell,
-            shift: keyboard_input.pressed(KeyCode::LShift)
-                || keyboard_input.pressed(KeyCode::RShift),
+            multi: keyboard_input.pressed(KeyCode::LShift)
+                || keyboard_input.pressed(KeyCode::RShift)
+                || keyboard_input.pressed(KeyCode::LControl)
+                || keyboard_input.pressed(KeyCode::RControl),
         })
     }
 }
@@ -97,7 +99,7 @@ fn handle_clicks(
     // But we may as well loop through all just in case
     for click_event in cell_click_events.iter() {
         // Select multiple tiles when shift is held
-        if click_event.shift {
+        if click_event.multi {
             if let Some(entity) = click_event.selected_cell {
                 let (_, maybe_selected, _) = cell_query.get(entity).unwrap();
                 match maybe_selected {
