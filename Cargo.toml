@@ -1,0 +1,11 @@
+[package]
+name = "bevy-sudoku"
+version = "0.1.0"
+authors = ["Alice Cecile <alice.i.cecile@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+bevy = {git = "https://github.com/BoxyUwU/bevy/", rev = "1a2abe883cfc0647462c1279af9a10abeef55b99"}
+sudoku = "0.7"
