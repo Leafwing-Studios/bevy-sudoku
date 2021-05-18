@@ -125,6 +125,7 @@ fn reset_sudoku(
     for _ in event_reader.iter() {
         // Flags the puzzle as having changed, causing the fill_puzzle system to reset all values
         // as if a new identical puzzle had been generated
+        // QUALITY: use an explicit set_changed() method instead once added
         initial_puzzle.deref_mut();
     }
 }
