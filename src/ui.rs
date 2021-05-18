@@ -75,28 +75,41 @@ fn spawn_buttons(
     new_button_materials: Res<ButtonMaterials<NewPuzzle>>,
     reset_button_materials: Res<ButtonMaterials<ResetPuzzle>>,
     solve_button_materials: Res<ButtonMaterials<SolvePuzzle>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
     let button_size = Size::new(Val::Px(100.0), Val::Px(100.0));
 
-    // Side panel
+    // Side panel root node
+    commands
+        .spawn_bundle(NodeBundle {
+            // FIXME: Set on right side of screen instead
+            style: Style {
+                size: Size::new(Val::Percent(50.0), Val::Percent(100.0)),
+                justify_content: JustifyContent::SpaceBetween,
+                ..Default::default()
+            },
+            material: materials.add(Color::BLACK.into()),
+            ..Default::default()
+        })
+        .with_children(|parent| {
+            // New puzzle
+            parent.spawn_bundle(BoardButtonBundle::<NewPuzzle>::new(
+                button_size,
+                &*new_button_materials,
+            ));
 
-    // New puzzle
-    commands.spawn_bundle(BoardButtonBundle::<NewPuzzle>::new(
-        button_size,
-        &*new_button_materials,
-    ));
+            // Reset puzzle
+            parent.spawn_bundle(BoardButtonBundle::<ResetPuzzle>::new(
+                button_size,
+                &*reset_button_materials,
+            ));
 
-    // Reset puzzle
-    commands.spawn_bundle(BoardButtonBundle::<ResetPuzzle>::new(
-        button_size,
-        &*reset_button_materials,
-    ));
-
-    // Solve puzzle
-    commands.spawn_bundle(BoardButtonBundle::<SolvePuzzle>::new(
-        button_size,
-        &*solve_button_materials,
-    ));
+            // Solve puzzle
+            parent.spawn_bundle(BoardButtonBundle::<SolvePuzzle>::new(
+                button_size,
+                &*solve_button_materials,
+            ));
+        });
 }
 
 fn responsive_buttons(

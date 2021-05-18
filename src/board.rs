@@ -42,6 +42,7 @@ pub struct DisplayedBy;
 /// A component that specifies whether digits were provided by the puzzle
 pub struct Fixed(pub bool);
 
+// FIXME: automatically shift with screen size
 pub mod setup {
     use super::*;
     pub struct SetupPlugin;
