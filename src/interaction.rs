@@ -28,12 +28,15 @@ struct CellClick {
 struct BackgroundColor(Handle<ColorMaterial>);
 struct SelectionColor(Handle<ColorMaterial>);
 
+// QUALITY: use typed system labels instead of strings
+// QUALITY: use system sets and label them all at once
 impl Plugin for InteractionPlugin {
     fn build(&self, app: &mut AppBuilder) {
         app.add_startup_system(cell_colors.system())
             .init_resource::<CellIndex>()
             .add_event::<CellClick>()
             .add_event::<CellInput>()
+            .init_resource::<InputMode>()
             // Should run before input to ensure mapping from position to cell is correct
             .add_system(index_cells.system().before("input"))
             // Various input systems
@@ -41,6 +44,7 @@ impl Plugin for InteractionPlugin {
             .add_system(select_all.system().label("input"))
             .add_system(cell_keyboard_input.system().label("input"))
             .add_system(erase_selected_cells.system().label("input"))
+            .add_system(swap_input_mode.system().label("input"))
             // Should immediately run to process input events after
             .add_system(handle_clicks.system().label("actions").after("input"))
             .add_system(set_cell_value.system().label("actions").after("input"))
@@ -340,5 +344,30 @@ mod cell_indexing {
                 },
             );
         }
+    }
+}
+
+/// The form that numbers are entered into a cell
+#[derive(Copy, Clone, PartialEq, Eq, Hash)]
+pub enum InputMode {
+    Fill,
+    CenterMark,
+    CornerMark,
+}
+
+impl Default for InputMode {
+    fn default() -> Self {
+        InputMode::Fill
+    }
+}
+
+/// Swaps the input mode based on keyboard input
+fn swap_input_mode(keyboard_input: Res<Input<KeyCode>>, mut input_mode: ResMut<InputMode>) {
+    if keyboard_input.just_pressed(KeyCode::Q) {
+        *input_mode = InputMode::Fill;
+    } else if keyboard_input.just_pressed(KeyCode::W) {
+        *input_mode = InputMode::CenterMark;
+    } else if keyboard_input.just_pressed(KeyCode::E) {
+        *input_mode = InputMode::CornerMark;
     }
 }

@@ -1,18 +1,32 @@
 use std::marker::PhantomData;
 
 use bevy::{ecs::component::Component, prelude::*};
+
+use crate::interaction::InputMode;
 pub struct BoardButtonsPlugin;
 
+// TODO: input cell values by button presses
+// QUALITY: use system sets for clarity
 impl Plugin for BoardButtonsPlugin {
     fn build(&self, app: &mut AppBuilder) {
         app.add_startup_system(spawn_buttons.system())
-            .add_system(responsive_buttons.system())
+            // Puzzle control buttons
+            .add_system(responsive_buttons.system().label("responsive_buttons"))
             .add_event::<NewPuzzle>()
             .add_system(puzzle_button::<NewPuzzle>.system())
             .add_event::<ResetPuzzle>()
             .add_system(puzzle_button::<ResetPuzzle>.system())
             .add_event::<SolvePuzzle>()
-            .add_system(puzzle_button::<SolvePuzzle>.system());
+            .add_system(puzzle_button::<SolvePuzzle>.system())
+            // Input mode buttons
+            .add_system(input_mode_buttons.system().label("input"))
+            // Must overwrite default button responsivity for selected input mode
+            .add_system(
+                show_selected_input_mode
+                    .system()
+                    .after("input")
+                    .after("responsive_buttons"),
+            );
     }
 }
 /// Resource that contains the raw materials for each button type
@@ -43,12 +57,17 @@ struct BoardButtonBundle<Marker: Component + Default> {
 
 impl<Marker: Component + Default> BoardButtonBundle<Marker> {
     fn new(size: Size<Val>, materials: &ButtonMaterials<Marker>) -> Self {
+        let data = Marker::default();
+        Self::new_with_data(size, materials, data)
+    }
+
+    fn new_with_data(size: Size<Val>, materials: &ButtonMaterials<Marker>, data: Marker) -> Self {
         let normal_material = materials.normal.clone();
         let hovered_material = materials.hovered.clone();
         let pressed_material = materials.pressed.clone();
 
         BoardButtonBundle {
-            marker: Marker::default(),
+            marker: data,
             button_bundle: ButtonBundle {
                 style: Style {
                     size,
@@ -73,11 +92,15 @@ pub struct ResetPuzzle;
 #[derive(Default)]
 pub struct SolvePuzzle;
 
+/// Creates the side panel buttons
+// TODO: layout properly
 fn spawn_buttons(
     mut commands: Commands,
     new_button_materials: Res<ButtonMaterials<NewPuzzle>>,
     reset_button_materials: Res<ButtonMaterials<ResetPuzzle>>,
     solve_button_materials: Res<ButtonMaterials<SolvePuzzle>>,
+    // TODO: split into three? Or maybe group into two resources total?
+    input_mode_button_materials: Res<ButtonMaterials<InputMode>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
     let button_size = Size::new(Val::Px(100.0), Val::Px(100.0));
@@ -95,6 +118,22 @@ fn spawn_buttons(
             ..Default::default()
         })
         .with_children(|parent| {
+            // Input mode buttons
+            parent.spawn_bundle(BoardButtonBundle::<InputMode>::new_with_data(
+                button_size,
+                &*input_mode_button_materials,
+                InputMode::Fill,
+            ));
+            parent.spawn_bundle(BoardButtonBundle::<InputMode>::new_with_data(
+                button_size,
+                &*input_mode_button_materials,
+                InputMode::CenterMark,
+            ));
+            parent.spawn_bundle(BoardButtonBundle::<InputMode>::new_with_data(
+                button_size,
+                &*input_mode_button_materials,
+                InputMode::CornerMark,
+            ));
             // New puzzle
             parent.spawn_bundle(BoardButtonBundle::<NewPuzzle>::new(
                 button_size,
@@ -114,6 +153,8 @@ fn spawn_buttons(
             ));
         });
 }
+/// Marker component for entities whose materials should not respond
+struct FixedMaterial;
 
 fn responsive_buttons(
     mut button_query: Query<
@@ -124,7 +165,7 @@ fn responsive_buttons(
             &HoveredMaterial,
             &PressedMaterial,
         ),
-        (With<Button>, Changed<Interaction>),
+        (Without<FixedMaterial>, Changed<Interaction>),
     >,
 ) {
     for (interaction, mut material, normal_material, hovered_material, pressed_material) in
@@ -138,6 +179,7 @@ fn responsive_buttons(
     }
 }
 
+/// Sends the event type associated with the button when pressed
 fn puzzle_button<Marker: Component + Default>(
     query: Query<&Interaction, With<Marker>>,
     mut event_writer: EventWriter<Marker>,
@@ -146,5 +188,44 @@ fn puzzle_button<Marker: Component + Default>(
 
     if *interaction == Interaction::Clicked {
         event_writer.send(Marker::default());
+    }
+}
+
+/// Changes the input mode of the puzzle when these buttons are pressed
+fn input_mode_buttons(
+    button_query: Query<(&Interaction, &InputMode), Changed<Interaction>>,
+    mut input_mode: ResMut<InputMode>,
+) {
+    for (interaction, button_input_mode) in button_query.iter() {
+        if *interaction == Interaction::Clicked {
+            *input_mode = *button_input_mode;
+        }
+    }
+}
+
+/// Permanently displays selected input mode as pressed
+fn show_selected_input_mode(
+    mut button_query: Query<(
+        Entity,
+        &InputMode,
+        &mut Handle<ColorMaterial>,
+        &PressedMaterial,
+        &NormalMaterial,
+    )>,
+    input_mode: Res<InputMode>,
+    mut commands: Commands,
+) {
+    if input_mode.is_changed() {
+        for (entity, button_input_mode, mut material, pressed_material, normal_material) in
+            button_query.iter_mut()
+        {
+            if *button_input_mode == *input_mode {
+                *material = pressed_material.0.clone();
+                commands.entity(entity).insert(FixedMaterial);
+            } else {
+                *material = normal_material.0.clone();
+                commands.entity(entity).remove::<FixedMaterial>();
+            }
+        }
     }
 }
