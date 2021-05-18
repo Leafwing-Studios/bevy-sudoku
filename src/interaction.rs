@@ -40,7 +40,7 @@ impl Plugin for InteractionPlugin {
             .add_system(cell_click.system().label("input"))
             .add_system(select_all.system().label("input"))
             .add_system(cell_keyboard_input.system().label("input"))
-            .add_system(clear_selected.system().label("input"))
+            .add_system(erase_selected_cells.system().label("input"))
             // Should immediately run to process input events after
             .add_system(handle_clicks.system().label("actions").after("input"))
             .add_system(set_cell_value.system().label("actions").after("input"))
@@ -167,7 +167,7 @@ fn handle_clicks(
 }
 
 /// Clears all selected cells when Backspace or Delete is pressed
-fn clear_selected(
+fn erase_selected_cells(
     mut query: Query<(&mut Value, &Fixed), With<Selected>>,
     keyboard_input: Res<Input<KeyCode>>,
 ) {
