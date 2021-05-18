@@ -174,7 +174,7 @@ fn erase_selected_cells(
     if keyboard_input.just_pressed(KeyCode::Delete) || keyboard_input.just_pressed(KeyCode::Back) {
         for (mut value, is_fixed) in query.iter_mut() {
             if !is_fixed.0 {
-                *value = Value(None);
+                *value = Value::Empty;
             }
         }
     }
@@ -236,6 +236,7 @@ fn set_cell_value(
     mut query: Query<(&mut Value, &Fixed), With<Selected>>,
     mut event_reader: EventReader<CellInput>,
 ) {
+    use Value::*;
     for event in event_reader.iter() {
         for (mut value, is_fixed) in query.iter_mut() {
             // Don't change the values of cells given by the puzzle
@@ -246,19 +247,21 @@ fn set_cell_value(
             // Grab the value from the event that was sent
             let new_value = event.value;
 
-            *value = Value(match value.0 {
+            *value = match *value {
                 // Fill blank values with the key pressed
-                None => Some(new_value),
-                Some(old_value) => {
+                Empty => Filled(new_value),
+                // Overwrite markings with the key pressed
+                Marked(_, _) => Filled(new_value),
+                Filled(old_value) => {
                     // Remove existing values if they match
                     if old_value == new_value {
-                        None
+                        Empty
                     } else {
                         // Otherwise overwrite them
-                        Some(new_value)
+                        Filled(new_value)
                     }
                 }
-            });
+            };
         }
     }
 }
@@ -267,14 +270,17 @@ fn update_cell_numbers(
     cell_query: Query<(&Value, &Relation<DisplayedBy>), (With<Cell>, Changed<Value>)>,
     mut num_query: Query<&mut Text>,
 ) {
+    use Value::*;
     for (cell_value, displayed_by) in cell_query.iter() {
         for (num_entity, _) in displayed_by {
             let mut text = num_query.get_mut(num_entity).unwrap();
 
             // There is only one section in our text
-            text.sections[0].value = match cell_value.0 {
-                Some(n) => n.to_string(),
-                None => "".to_string(),
+            text.sections[0].value = match *cell_value {
+                Filled(n) => n.to_string(),
+                // TODO: properly display markings
+                Marked(_, _) => "".to_string(),
+                Empty => "".to_string(),
             }
         }
     }

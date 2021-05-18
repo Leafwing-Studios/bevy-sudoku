@@ -31,9 +31,24 @@ impl Coordinates {
     }
 }
 
-/// The number marked inside of each cell
-#[derive(PartialEq, Eq, Clone, Copy, Debug)]
-pub struct Value(pub Option<u8>);
+/// The number(s) marked inside of each cell
+#[derive(PartialEq, Eq, Clone, Copy)]
+pub enum Value {
+    /// No value is filled in this cell
+    Empty,
+    /// A single value is known to be in this cell
+    Filled(u8),
+    /// We have partial information about the state of this cell
+    Marked(CenterMarks, CornerMarks),
+}
+
+/// The value of this cell could be any of the possibilities written in the center of the cell
+#[derive(PartialEq, Eq, Clone, Copy)]
+pub struct CenterMarks([bool; 9]);
+
+/// The values marked in the corner of this cell must occur in these cells within the square
+#[derive(PartialEq, Eq, Clone, Copy)]
+pub struct CornerMarks([bool; 9]);
 
 // Marker relation to designate that the Value on the source entity (the Cell entity)
 // is displayed by the target entity (the Text2d entity in the same location)
@@ -154,7 +169,7 @@ pub mod setup {
                     square: Coordinates::compute_square(row, column),
                 },
                 // No digits are filled in to begin with
-                value: Value(None),
+                value: Value::Empty,
                 fixed: Fixed(false),
                 cell_fill: SpriteBundle {
                     // The material for this sprite begins with the same material as our background

@@ -49,7 +49,7 @@ fn parse_sudoku(sudoku: Sudoku) -> HashMap<Coordinates, Value> {
     let mut map = HashMap::default();
 
     // Sudoku::iter() goes from left to right, top to bottom
-    for val in sudoku.iter() {
+    for value in sudoku.iter() {
         column += 1;
         if column == 10 {
             row += 1;
@@ -62,7 +62,11 @@ fn parse_sudoku(sudoku: Sudoku) -> HashMap<Coordinates, Value> {
             column,
             square,
         };
-        let value = Value(val);
+
+        let value = match value {
+            Some(v) => Value::Filled(v),
+            None => Value::Empty,
+        };
         map.insert(coordinates, value);
     }
     map
@@ -106,14 +110,9 @@ fn fill_puzzle(
     for (coordinates, mut value, mut is_fixed) in query.iter_mut() {
         let initial_value = initial_puzzle.numbers.get(coordinates).unwrap();
 
-        // Fill in cells from initial puzzle and mark those cells as fixed
-        if initial_value.0.is_some() {
-            *value = *initial_value;
-            is_fixed.0 = true;
-        } else {
-            *value = Value(None);
-            is_fixed.0 = false;
-        }
+        // Fill in cells from initial puzzle and mark non-empty cells as fixed
+        *value = *initial_value;
+        is_fixed.0 = !(*initial_value == Value::Empty);
     }
 }
 
