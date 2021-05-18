@@ -110,46 +110,43 @@ fn handle_clicks(
     // Usually there's just going to be one of these per frame
     // But we may as well loop through all just in case
     for click_event in cell_click_events.iter() {
-        if click_event.drag {
-            if let Some(entity) = click_event.selected_cell {
+        // If the user clicks outside of the grid, unselect everything
+        if click_event.selected_cell.is_none() {
+            for (entity, _, _) in cell_query.iter() {
+                commands.entity(entity).remove::<Selected>();
+            }
+        // A grid cell was clicked
+        } else {
+            let entity = click_event.selected_cell.unwrap();
+            // A drag click was used
+            if click_event.drag {
                 // Select cells clicked
                 commands.entity(entity).insert(Selected);
+            // A non-drag click was used
             } else {
-                for (entity, _, _) in cell_query.iter() {
-                    // If the user clicks outside of the grid, unselect everything
-                    commands.entity(entity).remove::<Selected>();
-                }
-            }
-        } else {
-            // Select multiple tiles when shift is held
-            if click_event.multi {
-                if let Some(entity) = click_event.selected_cell {
-                    let (_, maybe_selected, _) = cell_query.get(entity).unwrap();
+                let (_, maybe_selected, current_value) = cell_query.get(entity).unwrap();
+
+                // Shift or control was held
+                if click_event.multi {
                     match maybe_selected {
                         // Select cells that aren't selected
                         None => commands.entity(entity).insert(Selected),
                         // Unselect cells that were already selected
                         Some(_) => commands.entity(entity).remove::<Selected>(),
                     };
+                // A single, instant click was used
                 } else {
-                    for (entity, _, _) in cell_query.iter() {
-                        // If the user clicks outside of the grid, unselect everything
-                        commands.entity(entity).remove::<Selected>();
-                    }
-                }
-            } else {
-                // Begin by deselecting everything
-                for (entity, _, _) in cell_query.iter() {
-                    commands.entity(entity).remove::<Selected>();
-                }
-
-                // Only select one tile at once normally
-                if let Some(entity) = click_event.selected_cell {
-                    let (_, maybe_selected, current_value) = cell_query.get(entity).unwrap();
+                    // Count the number of currently selected cells
                     let n_selected = cell_query
                         .iter()
                         .filter(|(_, maybe_selected, _)| maybe_selected.is_some())
                         .count();
+
+                    // Clear all selections other than those made due to this click
+                    for (entity, _, _) in cell_query.iter() {
+                        commands.entity(entity).remove::<Selected>();
+                    }
+
                     // On a double click, select all tiles with a matching number
                     if maybe_selected.is_some() && n_selected <= 1 {
                         for (entity, _, value) in cell_query.iter() {
