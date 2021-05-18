@@ -44,6 +44,8 @@ pub struct Fixed(pub bool);
 
 // FIXME: automatically shift with screen size
 pub mod setup {
+    use crate::aesthetics::{NUM_OFFSET_X, NUM_OFFSET_Y};
+
     use super::*;
     pub struct SetupPlugin;
 
@@ -180,8 +182,13 @@ pub mod setup {
         };
 
         for (cell_entity, cell_transform) in query.iter() {
-            // These numbers must be displayed on top of the cells they are in
             let mut number_transform = cell_transform.clone();
+
+            // Tweaks for aesthetic perfection
+            number_transform.translation.x += NUM_OFFSET_X;
+            number_transform.translation.y += NUM_OFFSET_Y;
+
+            // These numbers must be displayed on top of the cells they are in
             number_transform.translation.z += 1.0;
 
             let text_style = TextStyle {

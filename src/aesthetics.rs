@@ -28,6 +28,9 @@ pub const GRID_LEFT_EDGE: f32 = GRID_CENTER_X - 0.5 * GRID_SIZE;
 pub const GRID_CENTER_Y: f32 = 0.0;
 pub const GRID_BOT_EDGE: f32 = GRID_CENTER_Y - 0.5 * GRID_SIZE;
 
+pub const NUM_OFFSET_X: f32 = 0.0 * CELL_SIZE;
+pub const NUM_OFFSET_Y: f32 = 0.03 * CELL_SIZE;
+
 pub struct AssetLoadingPlugin;
 
 impl Plugin for AssetLoadingPlugin {
