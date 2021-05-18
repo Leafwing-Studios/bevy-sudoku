@@ -4,6 +4,7 @@ mod aesthetics;
 mod board;
 mod interaction;
 mod sudoku_generation;
+mod ui;
 mod utils;
 
 fn main() {
@@ -17,6 +18,20 @@ fn main() {
         .add_plugin(board::setup::SetupPlugin)
         .add_plugin(interaction::InteractionPlugin)
         .add_plugin(sudoku_generation::GenerationPlugin)
+        .add_plugin(ui::BoardButtonsPlugin)
+        .add_startup_system(spawn_cameras.system())
         .add_system(exit_on_esc_system.system())
         .run();
+}
+
+struct MainCamera;
+struct UiCamera;
+
+fn spawn_cameras(mut commands: Commands) {
+    commands
+        .spawn_bundle(OrthographicCameraBundle::new_2d())
+        .insert(MainCamera);
+    commands
+        .spawn_bundle(UiCameraBundle::default())
+        .insert(UiCamera);
 }

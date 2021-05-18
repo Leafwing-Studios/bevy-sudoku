@@ -1,5 +1,7 @@
 /// Stores aesthetic configuration and handles asset loading
+use crate::ui::{ButtonMaterials, NewPuzzle, ResetPuzzle, SolvePuzzle};
 use bevy::prelude::*;
+use std::marker::PhantomData;
 
 // Colors
 pub const BACKGROUND_COLOR: Color = Color::rgb(1.0, 1.0, 1.0);
@@ -29,7 +31,10 @@ pub struct AssetLoadingPlugin;
 
 impl Plugin for AssetLoadingPlugin {
     fn build(&self, app: &mut AppBuilder) {
-        app.add_startup_system(load_fonts.system());
+        app.add_startup_system(load_fonts.system())
+            .init_resource::<ButtonMaterials<NewPuzzle>>()
+            .init_resource::<ButtonMaterials<ResetPuzzle>>()
+            .init_resource::<ButtonMaterials<SolvePuzzle>>();
     }
 }
 
@@ -40,4 +45,40 @@ fn load_fonts(mut commands: Commands, asset_server: ResMut<AssetServer>) {
     commands.insert_resource(FixedFont(fixed_handle));
     let fillable_handle = asset_server.load(FILLABLE_NUM_FONT);
     commands.insert_resource(FillableFont(fillable_handle));
+}
+
+impl FromWorld for ButtonMaterials<NewPuzzle> {
+    fn from_world(world: &mut World) -> Self {
+        let mut materials = world.get_resource_mut::<Assets<ColorMaterial>>().unwrap();
+        ButtonMaterials {
+            normal: materials.add(Color::rgb(1.0, 0.15, 0.15).into()),
+            hovered: materials.add(Color::rgb(0.25, 0.25, 0.25).into()),
+            pressed: materials.add(Color::rgb(0.35, 0.75, 0.35).into()),
+            _marker: PhantomData,
+        }
+    }
+}
+
+impl FromWorld for ButtonMaterials<ResetPuzzle> {
+    fn from_world(world: &mut World) -> Self {
+        let mut materials = world.get_resource_mut::<Assets<ColorMaterial>>().unwrap();
+        ButtonMaterials {
+            normal: materials.add(Color::rgb(0.15, 1.0, 0.15).into()),
+            hovered: materials.add(Color::rgb(0.25, 0.25, 0.25).into()),
+            pressed: materials.add(Color::rgb(0.35, 0.75, 0.35).into()),
+            _marker: PhantomData,
+        }
+    }
+}
+
+impl FromWorld for ButtonMaterials<SolvePuzzle> {
+    fn from_world(world: &mut World) -> Self {
+        let mut materials = world.get_resource_mut::<Assets<ColorMaterial>>().unwrap();
+        ButtonMaterials {
+            normal: materials.add(Color::rgb(0.15, 0.15, 1.0).into()),
+            hovered: materials.add(Color::rgb(0.25, 0.25, 0.25).into()),
+            pressed: materials.add(Color::rgb(0.35, 0.75, 0.35).into()),
+            _marker: PhantomData,
+        }
+    }
 }

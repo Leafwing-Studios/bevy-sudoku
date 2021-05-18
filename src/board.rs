@@ -48,8 +48,7 @@ pub mod setup {
 
     impl Plugin for SetupPlugin {
         fn build(&self, app: &mut AppBuilder) {
-            app.add_startup_system(spawn_camera.system())
-                .add_startup_system(spawn_grid.system())
+            app.add_startup_system(spawn_grid.system())
                 .add_startup_system(spawn_cells.system())
                 // Must occur in a new stage to ensure that the cells are initialized
                 // as commands are not processed until the end of the stage
@@ -58,10 +57,6 @@ pub mod setup {
                     spawn_cell_numbers.system(),
                 );
         }
-    }
-
-    fn spawn_camera(mut commands: Commands) {
-        commands.spawn_bundle(OrthographicCameraBundle::new_2d());
     }
 
     fn spawn_grid(mut commands: Commands, mut materials: ResMut<Assets<ColorMaterial>>) {

@@ -1,8 +1,11 @@
-/// Player input handling for actually playing Sudoku
-use crate::aesthetics::{BACKGROUND_COLOR, SELECTION_COLOR};
 use crate::board::{Cell, DisplayedBy, Fixed, Value};
+/// Player input handling for actually playing Sudoku
+use crate::{
+    aesthetics::{BACKGROUND_COLOR, SELECTION_COLOR},
+    MainCamera,
+};
 use bevy::prelude::*;
-use bevy::{render::camera::Camera, utils::HashMap};
+use bevy::utils::HashMap;
 
 use cell_indexing::{index_cells, CellIndex};
 pub struct InteractionPlugin;
@@ -49,7 +52,7 @@ fn cell_colors(mut commands: Commands, mut materials: ResMut<Assets<ColorMateria
 }
 
 fn cell_click(
-    camera_query: Query<&Transform, With<Camera>>,
+    camera_query: Query<&Transform, With<MainCamera>>,
     mouse_button_input: Res<Input<MouseButton>>,
     keyboard_input: Res<Input<KeyCode>>,
     windows: Res<Windows>,
