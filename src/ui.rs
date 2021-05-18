@@ -7,9 +7,12 @@ impl Plugin for BoardButtonsPlugin {
     fn build(&self, app: &mut AppBuilder) {
         app.add_startup_system(spawn_buttons.system())
             .add_system(responsive_buttons.system())
-            .add_system(new_puzzle.system())
-            .add_system(reset_puzzle.system())
-            .add_system(solve_puzzle.system());
+            .add_event::<NewPuzzle>()
+            .add_system(puzzle_button::<NewPuzzle>.system())
+            .add_event::<ResetPuzzle>()
+            .add_system(puzzle_button::<ResetPuzzle>.system())
+            .add_event::<SolvePuzzle>()
+            .add_system(puzzle_button::<SolvePuzzle>.system());
     }
 }
 /// Resource that contains the raw materials for each button type
@@ -135,8 +138,13 @@ fn responsive_buttons(
     }
 }
 
-fn new_puzzle() {}
+fn puzzle_button<Marker: Component + Default>(
+    query: Query<&Interaction, With<Marker>>,
+    mut event_writer: EventWriter<Marker>,
+) {
+    let interaction = query.single().unwrap();
 
-fn reset_puzzle() {}
-
-fn solve_puzzle() {}
+    if *interaction == Interaction::Clicked {
+        event_writer.send(Marker::default());
+    }
+}
