@@ -33,15 +33,17 @@ impl Plugin for InteractionPlugin {
         app.add_startup_system(cell_colors.system())
             .init_resource::<CellIndex>()
             .add_event::<CellClick>()
+            .add_event::<CellInput>()
             // Should run before input to ensure mapping from position to cell is correct
             .add_system(index_cells.system().before("input"))
             // Various input systems
             .add_system(cell_click.system().label("input"))
             .add_system(select_all.system().label("input"))
-            .add_system(set_cell_value.system().label("input"))
+            .add_system(cell_keyboard_input.system().label("input"))
             .add_system(clear_selected.system().label("input"))
             // Should immediately run to process input events after
             .add_system(handle_clicks.system().label("actions").after("input"))
+            .add_system(set_cell_value.system().label("actions").after("input"))
             // Should run after actions to avoid delays
             .add_system(color_selected.system().after("actions"))
             .add_system(update_cell_numbers.system().after("actions"));
@@ -210,38 +212,53 @@ fn color_selected(
     }
 }
 
-/// Set the value of the selected cells when 1-9 is pressed
-fn set_cell_value(
-    mut query: Query<(&mut Value, &Fixed), With<Selected>>,
+struct CellInput {
+    value: u8,
+}
+
+fn cell_keyboard_input(
     keyboard_input: Res<Input<KeyCode>>,
+    mut event_writer: EventWriter<CellInput>,
 ) {
     for key_code in keyboard_input.get_just_pressed() {
         let key_u8 = *key_code as u8;
 
         // The u8 values of our key codes correspond to their digits + 1 when < 9
         if key_u8 < 9 {
-            let new_value = key_u8 + 1;
+            let value = key_u8 + 1;
+            event_writer.send(CellInput { value });
+        }
+    }
+}
 
-            for (mut value, is_fixed) in query.iter_mut() {
-                // Don't change the values of cells given by the puzzle
-                if is_fixed.0 {
-                    break;
-                }
-
-                *value = Value(match value.0 {
-                    // Fill blank values with the key pressed
-                    None => Some(new_value),
-                    Some(old_value) => {
-                        // Remove existing values if they match
-                        if old_value == new_value {
-                            None
-                        } else {
-                            // Otherwise overwrite them
-                            Some(new_value)
-                        }
-                    }
-                });
+/// Set the value of the selected cells when 1-9 is pressed
+fn set_cell_value(
+    mut query: Query<(&mut Value, &Fixed), With<Selected>>,
+    mut event_reader: EventReader<CellInput>,
+) {
+    for event in event_reader.iter() {
+        for (mut value, is_fixed) in query.iter_mut() {
+            // Don't change the values of cells given by the puzzle
+            if is_fixed.0 {
+                break;
             }
+
+            // Grab the value from the event that was sent
+            let new_value = event.value;
+
+            *value = Value(match value.0 {
+                // Fill blank values with the key pressed
+                None => Some(new_value),
+                Some(old_value) => {
+                    // Remove existing values if they match
+                    if old_value == new_value {
+                        None
+                    } else {
+                        // Otherwise overwrite them
+                        Some(new_value)
+                    }
+                }
+            });
         }
     }
 }
