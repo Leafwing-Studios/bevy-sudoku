@@ -212,18 +212,16 @@ pub mod setup {
                 color: NUMBER_COLOR,
             };
 
-            let text_entity = commands.spawn().id();
-
-            commands
-                .entity(text_entity)
-                .insert_bundle(Text2dBundle {
+            let text_entity = commands
+                .spawn_bundle(Text2dBundle {
                     // This value begins empty, but then is later set in update_cell_numbers system
                     // to match the cell's `value` field
                     text: Text::with_section("", text_style.clone(), TEXT_ALIGNMENT),
                     transform: number_transform,
                     ..Default::default()
                 })
-                .insert(CellNumber);
+                .insert(CellNumber)
+                .id();
 
             commands
                 .entity(cell_entity)
