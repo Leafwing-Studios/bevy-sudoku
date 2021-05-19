@@ -36,6 +36,7 @@ impl Plugin for InteractionPlugin {
             .init_resource::<CellIndex>()
             .add_event::<CellClick>()
             .add_event::<CellInput>()
+            .init_resource::<CellInputMap>()
             .init_resource::<InputMode>()
             // Should run before input to ensure mapping from position to cell is correct
             .add_system(index_cells.system().before("input"))
@@ -216,21 +217,69 @@ fn color_selected(
     }
 }
 
-struct CellInput {
+pub struct CellInput {
     value: u8,
+}
+
+/// Contains keybindings for converting key presses into numbers
+struct CellInputMap {
+    map: HashMap<KeyCode, u8>,
+}
+
+impl CellInputMap {
+    fn insert(&mut self, k: KeyCode, v: u8) {
+        self.map.insert(k, v);
+    }
+
+    fn get(&self, k: &KeyCode) -> Option<&u8> {
+        self.map.get(k)
+    }
+}
+
+impl Default for CellInputMap {
+    fn default() -> Self {
+        use KeyCode::*;
+
+        let mut input_map = CellInputMap {
+            map: HashMap::default(),
+        };
+
+        // Numbers above the letters
+        input_map.insert(Key1, 1);
+        input_map.insert(Key2, 2);
+        input_map.insert(Key3, 3);
+        input_map.insert(Key4, 4);
+        input_map.insert(Key5, 5);
+        input_map.insert(Key6, 6);
+        input_map.insert(Key7, 7);
+        input_map.insert(Key8, 8);
+        input_map.insert(Key9, 9);
+
+        // Numpad
+        input_map.insert(Numpad1, 1);
+        input_map.insert(Numpad2, 2);
+        input_map.insert(Numpad3, 3);
+        input_map.insert(Numpad4, 4);
+        input_map.insert(Numpad5, 5);
+        input_map.insert(Numpad6, 6);
+        input_map.insert(Numpad7, 7);
+        input_map.insert(Numpad8, 8);
+        input_map.insert(Numpad9, 9);
+
+        input_map
+    }
 }
 
 fn cell_keyboard_input(
     keyboard_input: Res<Input<KeyCode>>,
+    input_map: Res<CellInputMap>,
     mut event_writer: EventWriter<CellInput>,
 ) {
     for key_code in keyboard_input.get_just_pressed() {
-        let key_u8 = *key_code as u8;
+        let maybe_value = input_map.get(key_code);
 
-        // The u8 values of our key codes correspond to their digits + 1 when < 9
-        if key_u8 < 9 {
-            let value = key_u8 + 1;
-            event_writer.send(CellInput { value });
+        if let Some(value) = maybe_value {
+            event_writer.send(CellInput { value: *value });
         }
     }
 }
