@@ -106,6 +106,10 @@ impl<Marker: Component> BoardButtonBundle<Marker> {
                 // TODO: add padding between buttons
                 style: Style {
                     size,
+                    // Horizontally center child text
+                    justify_content: JustifyContent::Center,
+                    // Vertically center child text
+                    align_items: AlignItems::Center,
                     ..Default::default()
                 },
                 material: normal_material.clone(),
@@ -224,7 +228,6 @@ fn spawn_buttons(
             color: NUMBER_COLOR,
         };
 
-        // TODO: align these
         number_buttons[i] = commands
             .spawn_bundle(BoardButtonBundle::<CellInput>::new_with_data(
                 num_button_size,
