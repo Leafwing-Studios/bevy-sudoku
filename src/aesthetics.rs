@@ -1,5 +1,6 @@
 /// Stores aesthetic configuration and handles asset loading
 use crate::{
+    board::Value,
     interaction::InputMode,
     ui::{ButtonMaterials, NewPuzzle, ResetPuzzle, SolvePuzzle},
 };
@@ -42,7 +43,8 @@ impl Plugin for AssetLoadingPlugin {
             .init_resource::<ButtonMaterials<NewPuzzle>>()
             .init_resource::<ButtonMaterials<ResetPuzzle>>()
             .init_resource::<ButtonMaterials<SolvePuzzle>>()
-            .init_resource::<ButtonMaterials<InputMode>>();
+            .init_resource::<ButtonMaterials<InputMode>>()
+            .init_resource::<ButtonMaterials<Value>>();
     }
 }
 
@@ -96,6 +98,18 @@ impl FromWorld for ButtonMaterials<InputMode> {
         let mut materials = world.get_resource_mut::<Assets<ColorMaterial>>().unwrap();
         ButtonMaterials {
             normal: materials.add(Color::rgb(0.15, 0.15, 0.15).into()),
+            hovered: materials.add(Color::rgb(0.25, 0.25, 0.25).into()),
+            pressed: materials.add(Color::rgb(0.35, 0.75, 0.35).into()),
+            _marker: PhantomData,
+        }
+    }
+}
+
+impl FromWorld for ButtonMaterials<Value> {
+    fn from_world(world: &mut World) -> Self {
+        let mut materials = world.get_resource_mut::<Assets<ColorMaterial>>().unwrap();
+        ButtonMaterials {
+            normal: materials.add(Color::rgb(0.8, 0.8, 0.8).into()),
             hovered: materials.add(Color::rgb(0.25, 0.25, 0.25).into()),
             pressed: materials.add(Color::rgb(0.35, 0.75, 0.35).into()),
             _marker: PhantomData,

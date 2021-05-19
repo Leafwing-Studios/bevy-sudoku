@@ -2,7 +2,12 @@ use std::marker::PhantomData;
 
 use bevy::{ecs::component::Component, prelude::*};
 
-use crate::{interaction::InputMode, utils::SudokuStage};
+use crate::{
+    aesthetics::{FixedFont, NUMBER_COLOR},
+    board::Value,
+    interaction::InputMode,
+    utils::SudokuStage,
+};
 
 use self::config::*;
 
@@ -10,7 +15,9 @@ mod config {
     // The percentage of the screen that the UI panel takes up
     pub const UI_FRACTION: f32 = 40.0;
     /// The side length of the UI buttons
-    pub const BUTTON_LENGTH: f32 = 128.0;
+    pub const BUTTON_LENGTH: f32 = 64.0;
+    /// The side length of the numpad-like input buttons
+    pub const NUM_BUTTON_LENGTH: f32 = 64.0;
 }
 
 pub struct BoardButtonsPlugin;
@@ -53,8 +60,8 @@ impl FromWorld for NoneColor {
 }
 
 /// Resource that contains the raw materials for each button type
-/// correspsonding to the Marker type marker component
-pub struct ButtonMaterials<Marker: Component + Default> {
+/// corresponding to the Marker type marker component
+pub struct ButtonMaterials<Marker: Component> {
     pub normal: Handle<ColorMaterial>,
     pub hovered: Handle<ColorMaterial>,
     pub pressed: Handle<ColorMaterial>,
@@ -69,7 +76,7 @@ struct HoveredMaterial(Handle<ColorMaterial>);
 struct PressedMaterial(Handle<ColorMaterial>);
 
 #[derive(Bundle)]
-struct BoardButtonBundle<Marker: Component + Default> {
+struct BoardButtonBundle<Marker: Component> {
     marker: Marker,
     #[bundle]
     button_bundle: ButtonBundle,
@@ -83,7 +90,9 @@ impl<Marker: Component + Default> BoardButtonBundle<Marker> {
         let data = Marker::default();
         Self::new_with_data(size, materials, data)
     }
+}
 
+impl<Marker: Component> BoardButtonBundle<Marker> {
     fn new_with_data(size: Size<Val>, materials: &ButtonMaterials<Marker>, data: Marker) -> Self {
         let normal_material = materials.normal.clone();
         let hovered_material = materials.hovered.clone();
@@ -172,23 +181,62 @@ fn spawn_buttons(
     new_button_materials: Res<ButtonMaterials<NewPuzzle>>,
     reset_button_materials: Res<ButtonMaterials<ResetPuzzle>>,
     solve_button_materials: Res<ButtonMaterials<SolvePuzzle>>,
+    number_materials: Res<ButtonMaterials<Value>>,
     // TODO: split into three? Or maybe group into two resources total?
     input_mode_button_materials: Res<ButtonMaterials<InputMode>>,
+    font: Res<FixedFont>,
 ) {
     let button_size = Size::new(Val::Px(BUTTON_LENGTH), Val::Px(BUTTON_LENGTH));
+    let num_button_size = Size::new(Val::Px(NUM_BUTTON_LENGTH), Val::Px(NUM_BUTTON_LENGTH));
 
-    // Layout entities
-    let ui_root_entity = ui_root_query.single().unwrap();
-    let top_row_entity = commands
-        .spawn_bundle(NodeBundle {
-            ..Default::default()
-        })
-        .id();
-    let bottom_row_entity = commands
-        .spawn_bundle(NodeBundle {
-            ..Default::default()
-        })
-        .id();
+    // Layout nodes
+    const N_ROWS: usize = 5;
+    let mut layout_nodes = [Entity::new(0); N_ROWS];
+    for i in 0..N_ROWS {
+        layout_nodes[i] = commands
+            .spawn_bundle(NodeBundle {
+                style: Style {
+                    justify_content: JustifyContent::Center,
+                    align_items: AlignItems::Center,
+                    align_content: AlignContent::Center,
+                    ..Default::default()
+                },
+                ..Default::default()
+            })
+            .id();
+    }
+
+    // Number input buttons
+    let mut number_buttons = [Entity::new(0); 9];
+    for i in 0..9 {
+        let value = i + 1;
+
+        const TEXT_ALIGNMENT: TextAlignment = TextAlignment {
+            vertical: VerticalAlign::Center,
+            horizontal: HorizontalAlign::Center,
+        };
+
+        let text_style = TextStyle {
+            font: font.0.clone(),
+            font_size: 0.8 * NUM_BUTTON_LENGTH,
+            color: NUMBER_COLOR,
+        };
+
+        // TODO: align these
+        number_buttons[i] = commands
+            .spawn_bundle(BoardButtonBundle::<Value>::new_with_data(
+                num_button_size,
+                &*number_materials,
+                Value::Filled(value as u8),
+            ))
+            .with_children(|parent| {
+                parent.spawn_bundle(TextBundle {
+                    text: Text::with_section(value.to_string(), text_style.clone(), TEXT_ALIGNMENT),
+                    ..Default::default()
+                });
+            })
+            .id();
+    }
 
     // Input mode buttons
     let fill_button = commands
@@ -237,18 +285,32 @@ fn spawn_buttons(
         ))
         .id();
 
-    // Building our hierarchy
-    commands
-        .entity(ui_root_entity)
-        .push_children(&[top_row_entity, bottom_row_entity]);
+    // Building our hierarchy, from bottom to top
+    let ui_root_entity = ui_root_query.single().unwrap();
+    commands.entity(ui_root_entity).push_children(&layout_nodes);
 
-    commands.entity(top_row_entity).push_children(&[
+    // Number buttons
+    commands
+        .entity(layout_nodes[0])
+        .push_children(&number_buttons[0..3]);
+
+    commands
+        .entity(layout_nodes[1])
+        .push_children(&number_buttons[3..6]);
+
+    commands
+        .entity(layout_nodes[2])
+        .push_children(&number_buttons[6..9]);
+
+    // Row 1 buttons
+    commands.entity(layout_nodes[3]).push_children(&[
         fill_button,
         center_mark_button,
         corner_mark_button,
     ]);
 
-    commands.entity(bottom_row_entity).push_children(&[
+    // Row 2 buttons
+    commands.entity(layout_nodes[4]).push_children(&[
         new_game_button,
         reset_game_button,
         solve_game_button,
