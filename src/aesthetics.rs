@@ -1,7 +1,6 @@
 /// Stores aesthetic configuration and handles asset loading
 use crate::{
-    board::Value,
-    interaction::InputMode,
+    interaction::{CellInput, InputMode},
     ui::{ButtonMaterials, NewPuzzle, ResetPuzzle, SolvePuzzle},
 };
 use bevy::prelude::*;
@@ -44,7 +43,7 @@ impl Plugin for AssetLoadingPlugin {
             .init_resource::<ButtonMaterials<ResetPuzzle>>()
             .init_resource::<ButtonMaterials<SolvePuzzle>>()
             .init_resource::<ButtonMaterials<InputMode>>()
-            .init_resource::<ButtonMaterials<Value>>();
+            .init_resource::<ButtonMaterials<CellInput>>();
     }
 }
 
@@ -105,7 +104,7 @@ impl FromWorld for ButtonMaterials<InputMode> {
     }
 }
 
-impl FromWorld for ButtonMaterials<Value> {
+impl FromWorld for ButtonMaterials<CellInput> {
     fn from_world(world: &mut World) -> Self {
         let mut materials = world.get_resource_mut::<Assets<ColorMaterial>>().unwrap();
         ButtonMaterials {

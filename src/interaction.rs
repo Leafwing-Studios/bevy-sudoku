@@ -217,8 +217,9 @@ fn color_selected(
     }
 }
 
+#[derive(Clone)]
 pub struct CellInput {
-    value: u8,
+    pub value: u8,
 }
 
 /// Contains keybindings for converting key presses into numbers

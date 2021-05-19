@@ -4,7 +4,7 @@ use bevy::{ecs::component::Component, prelude::*};
 
 use crate::{
     aesthetics::{FixedFont, NUMBER_COLOR},
-    board::Value,
+    interaction::CellInput,
     interaction::InputMode,
     utils::SudokuStage,
 };
@@ -29,6 +29,8 @@ impl Plugin for BoardButtonsPlugin {
         app.init_resource::<NoneColor>()
             .add_startup_system(spawn_layout_boxes.system())
             .add_startup_system_to_stage(SudokuStage::PostStartup, spawn_buttons.system())
+            // Number input buttons
+            .add_system(puzzle_button::<CellInput>.system().label("input"))
             // Puzzle control buttons
             .add_system(responsive_buttons.system().label("responsive_buttons"))
             .add_event::<NewPuzzle>()
@@ -116,11 +118,11 @@ impl<Marker: Component> BoardButtonBundle<Marker> {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct NewPuzzle;
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct ResetPuzzle;
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct SolvePuzzle;
 
 /// Marker component for layout box of Sudoku game elements
@@ -181,7 +183,7 @@ fn spawn_buttons(
     new_button_materials: Res<ButtonMaterials<NewPuzzle>>,
     reset_button_materials: Res<ButtonMaterials<ResetPuzzle>>,
     solve_button_materials: Res<ButtonMaterials<SolvePuzzle>>,
-    number_materials: Res<ButtonMaterials<Value>>,
+    number_materials: Res<ButtonMaterials<CellInput>>,
     // TODO: split into three? Or maybe group into two resources total?
     input_mode_button_materials: Res<ButtonMaterials<InputMode>>,
     font: Res<FixedFont>,
@@ -224,10 +226,10 @@ fn spawn_buttons(
 
         // TODO: align these
         number_buttons[i] = commands
-            .spawn_bundle(BoardButtonBundle::<Value>::new_with_data(
+            .spawn_bundle(BoardButtonBundle::<CellInput>::new_with_data(
                 num_button_size,
                 &*number_materials,
-                Value::Filled(value as u8),
+                CellInput { value: value as u8 },
             ))
             .with_children(|parent| {
                 parent.spawn_bundle(TextBundle {
@@ -343,14 +345,15 @@ fn responsive_buttons(
 }
 
 /// Sends the event type associated with the button when pressed
-fn puzzle_button<Marker: Component + Default>(
-    query: Query<&Interaction, With<Marker>>,
+/// using the data stored on the component of that type
+fn puzzle_button<Marker: Component + Clone>(
+    query: Query<(&Interaction, &Marker)>,
     mut event_writer: EventWriter<Marker>,
 ) {
-    let interaction = query.single().unwrap();
-
-    if *interaction == Interaction::Clicked {
-        event_writer.send(Marker::default());
+    for (interaction, marker) in query.iter() {
+        if *interaction == Interaction::Clicked {
+            event_writer.send(marker.clone());
+        }
     }
 }
 
