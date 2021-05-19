@@ -12,8 +12,8 @@ use crate::{
 use self::config::*;
 
 mod config {
-    // The percentage of the screen that the UI panel takes up
-    pub const UI_FRACTION: f32 = 40.0;
+    // The horizontal percentage of the screen that the UI panel takes up
+    pub const UI_FRACTION: f32 = 50.0;
     /// The side length of the UI buttons
     pub const BUTTON_LENGTH: f32 = 64.0;
     /// The side length of the numpad-like input buttons
@@ -22,7 +22,6 @@ mod config {
 
 pub struct BoardButtonsPlugin;
 
-// TODO: input cell values by button presses
 // QUALITY: use system sets for clarity
 impl Plugin for BoardButtonsPlugin {
     fn build(&self, app: &mut AppBuilder) {
@@ -135,6 +134,7 @@ struct SudokuBox;
 /// Marker component for layout box of UI elements
 struct UiBox;
 
+/// Spawns layout-only nodes for storing the game's user interface
 fn spawn_layout_boxes(mut commands: Commands, none_color: Res<NoneColor>) {
     // Global root node
     commands
@@ -325,6 +325,7 @@ fn spawn_buttons(
 /// Marker component for entities whose materials should not respond
 struct FixedMaterial;
 
+/// Changes the button materials when interacted with
 fn responsive_buttons(
     mut button_query: Query<
         (

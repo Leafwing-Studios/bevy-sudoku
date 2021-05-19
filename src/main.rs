@@ -23,10 +23,12 @@ fn main() {
         .add_system(exit_on_esc_system.system())
         .run();
 }
-
+/// Marker component for game camera
 struct MainCamera;
+/// Marker component for UI camera
 struct UiCamera;
 
+/// Adds cameras to our game
 fn spawn_cameras(mut commands: Commands) {
     commands
         .spawn_bundle(OrthographicCameraBundle::new_2d())

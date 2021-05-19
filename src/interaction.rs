@@ -25,14 +25,16 @@ struct CellClick {
 }
 
 // Various colors for our cells
+/// The color of the game's background, and the default color of the cells
 struct BackgroundColor(Handle<ColorMaterial>);
+/// The color of cells when selected
 struct SelectionColor(Handle<ColorMaterial>);
 
 // QUALITY: use typed system labels instead of strings
 // QUALITY: use system sets and label them all at once
 impl Plugin for InteractionPlugin {
     fn build(&self, app: &mut AppBuilder) {
-        app.add_startup_system(cell_colors.system())
+        app.add_startup_system(load_cell_colors.system())
             .init_resource::<CellIndex>()
             .add_event::<CellClick>()
             .add_event::<CellInput>()
@@ -54,12 +56,13 @@ impl Plugin for InteractionPlugin {
             .add_system(update_cell_numbers.system().after("actions"));
     }
 }
-
-fn cell_colors(mut commands: Commands, mut materials: ResMut<Assets<ColorMaterial>>) {
+/// Initializes cell color resources
+fn load_cell_colors(mut commands: Commands, mut materials: ResMut<Assets<ColorMaterial>>) {
     commands.insert_resource(BackgroundColor(materials.add(BACKGROUND_COLOR.into())));
     commands.insert_resource(SelectionColor(materials.add(SELECTION_COLOR.into())));
 }
 
+/// Turns raw clicks into `CellClick` events
 fn cell_click(
     camera_query: Query<&Transform, With<MainCamera>>,
     mouse_button_input: Res<Input<MouseButton>>,
@@ -109,6 +112,7 @@ fn cell_click(
     }
 }
 
+/// Selects cells based on the clicks received
 fn handle_clicks(
     mut cell_click_events: EventReader<CellClick>,
     cell_query: Query<(Entity, Option<&Selected>, &Value), With<Cell>>,
@@ -217,6 +221,7 @@ fn color_selected(
     }
 }
 
+/// Events that change the value stored in a cell
 #[derive(Clone)]
 pub struct CellInput {
     pub value: u8,
@@ -271,6 +276,7 @@ impl Default for CellInputMap {
     }
 }
 
+/// Send `CellInput` events based on keyboard input
 fn cell_keyboard_input(
     keyboard_input: Res<Input<KeyCode>>,
     input_map: Res<CellInputMap>,
@@ -342,11 +348,13 @@ fn update_cell_numbers(
 
 mod cell_indexing {
     use super::*;
+    /// An index that allows us to look up the entity at the correct position
     #[derive(Default)]
     pub struct CellIndex {
         pub cell_map: HashMap<Entity, BoundingBox>,
     }
 
+    /// The axis-aligned rectangle that contains our cells
     pub struct BoundingBox {
         pub bottom_left: Vec2,
         pub top_right: Vec2,
@@ -373,6 +381,7 @@ mod cell_indexing {
         }
     }
 
+    /// Builds a `CellIndex` for cells whose `Transform` has been changed
     pub fn index_cells(
         query: Query<(Entity, &Sprite, &Transform), (With<Cell>, Changed<Transform>)>,
         mut cell_index: ResMut<CellIndex>,
@@ -397,11 +406,14 @@ mod cell_indexing {
     }
 }
 
-/// The form that numbers are entered into a cell
+/// Different ways to enter a number into a cell
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub enum InputMode {
+    /// The value of the cell
     Fill,
+    /// One possible value of the cell
     CenterMark,
+    /// This value must be within one of these cells in the box
     CornerMark,
 }
 

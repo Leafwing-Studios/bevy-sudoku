@@ -49,6 +49,7 @@ impl Plugin for AssetLoadingPlugin {
 
 pub struct FixedFont(pub Handle<Font>);
 pub struct FillableFont(pub Handle<Font>);
+/// Load in fonts from assets
 fn load_fonts(mut commands: Commands, asset_server: ResMut<AssetServer>) {
     let fixed_handle = asset_server.load(FIXED_NUM_FONT);
     commands.insert_resource(FixedFont(fixed_handle));
