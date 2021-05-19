@@ -103,9 +103,10 @@ impl<Marker: Component> BoardButtonBundle<Marker> {
         BoardButtonBundle {
             marker: data,
             button_bundle: ButtonBundle {
-                // TODO: add padding between buttons
                 style: Style {
                     size,
+                    // Padding between buttons
+                    margin: Rect::all(Val::Px(5.0)),
                     // Horizontally center child text
                     justify_content: JustifyContent::Center,
                     // Vertically center child text
