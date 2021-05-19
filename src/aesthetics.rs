@@ -26,7 +26,7 @@ pub const MAJOR_LINE_THICKNESS: f32 = 4.0;
 // Positions
 // Defines the center lines of the grid in absolute coordinates
 // (0, 0) is in the center of the screen in Bevy
-pub const GRID_CENTER_X: f32 = 300.0;
+pub const GRID_CENTER_X: f32 = -300.0;
 pub const GRID_LEFT_EDGE: f32 = GRID_CENTER_X - 0.5 * GRID_SIZE;
 pub const GRID_CENTER_Y: f32 = 0.0;
 pub const GRID_BOT_EDGE: f32 = GRID_CENTER_Y - 0.5 * GRID_SIZE;

@@ -2,14 +2,26 @@ use std::marker::PhantomData;
 
 use bevy::{ecs::component::Component, prelude::*};
 
-use crate::interaction::InputMode;
+use crate::{interaction::InputMode, utils::SudokuStage};
+
+use self::config::*;
+
+mod config {
+    // The percentage of the screen that the UI panel takes up
+    pub const UI_FRACTION: f32 = 40.0;
+    /// The side length of the UI buttons
+    pub const BUTTON_LENGTH: f32 = 128.0;
+}
+
 pub struct BoardButtonsPlugin;
 
 // TODO: input cell values by button presses
 // QUALITY: use system sets for clarity
 impl Plugin for BoardButtonsPlugin {
     fn build(&self, app: &mut AppBuilder) {
-        app.add_startup_system(spawn_buttons.system())
+        app.init_resource::<NoneColor>()
+            .add_startup_system(spawn_layout_boxes.system())
+            .add_startup_system_to_stage(SudokuStage::PostStartup, spawn_buttons.system())
             // Puzzle control buttons
             .add_system(responsive_buttons.system().label("responsive_buttons"))
             .add_event::<NewPuzzle>()
@@ -29,6 +41,17 @@ impl Plugin for BoardButtonsPlugin {
             );
     }
 }
+
+/// The null, transparent color
+struct NoneColor(Handle<ColorMaterial>);
+
+impl FromWorld for NoneColor {
+    fn from_world(world: &mut World) -> Self {
+        let mut materials = world.get_resource_mut::<Assets<ColorMaterial>>().unwrap();
+        NoneColor(materials.add(Color::NONE.into()))
+    }
+}
+
 /// Resource that contains the raw materials for each button type
 /// correspsonding to the Marker type marker component
 pub struct ButtonMaterials<Marker: Component + Default> {
@@ -69,10 +92,9 @@ impl<Marker: Component + Default> BoardButtonBundle<Marker> {
         BoardButtonBundle {
             marker: data,
             button_bundle: ButtonBundle {
+                // TODO: add padding between buttons
                 style: Style {
                     size,
-                    // Center button
-                    margin: Rect::all(Val::Auto),
                     ..Default::default()
                 },
                 material: normal_material.clone(),
@@ -92,66 +114,145 @@ pub struct ResetPuzzle;
 #[derive(Default)]
 pub struct SolvePuzzle;
 
+/// Marker component for layout box of Sudoku game elements
+struct SudokuBox;
+/// Marker component for layout box of UI elements
+struct UiBox;
+
+fn spawn_layout_boxes(mut commands: Commands, none_color: Res<NoneColor>) {
+    // Global root node
+    commands
+        .spawn_bundle(NodeBundle {
+            style: Style {
+                size: Size::new(Val::Percent(100.0), Val::Percent(100.0)),
+                ..Default::default()
+            },
+            material: none_color.0.clone(),
+            ..Default::default()
+        })
+        .with_children(|parent| {
+            // Sudoku on left
+            parent
+                .spawn_bundle(NodeBundle {
+                    style: Style {
+                        size: Size::new(Val::Percent(100.0 - UI_FRACTION), Val::Percent(100.0)),
+                        ..Default::default()
+                    },
+                    material: none_color.0.clone(),
+                    ..Default::default()
+                })
+                .insert(SudokuBox);
+
+            // Interface on right
+            parent
+                .spawn_bundle(NodeBundle {
+                    style: Style {
+                        size: Size::new(Val::Percent(UI_FRACTION), Val::Percent(100.0)),
+                        // UI elements are arranged in stacked rows, growing from the bottom
+                        flex_direction: FlexDirection::ColumnReverse,
+                        // Don't wrap these elements
+                        flex_wrap: FlexWrap::NoWrap,
+                        // These buttons should be grouped tightly together within each row
+                        align_items: AlignItems::Center,
+                        // Center the UI vertically
+                        justify_content: JustifyContent::Center,
+                        ..Default::default()
+                    },
+                    material: none_color.0.clone(),
+                    ..Default::default()
+                })
+                .insert(UiBox);
+        });
+}
+
 /// Creates the side panel buttons
-// TODO: layout properly
 fn spawn_buttons(
     mut commands: Commands,
+    ui_root_query: Query<Entity, With<UiBox>>,
     new_button_materials: Res<ButtonMaterials<NewPuzzle>>,
     reset_button_materials: Res<ButtonMaterials<ResetPuzzle>>,
     solve_button_materials: Res<ButtonMaterials<SolvePuzzle>>,
     // TODO: split into three? Or maybe group into two resources total?
     input_mode_button_materials: Res<ButtonMaterials<InputMode>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
-    let button_size = Size::new(Val::Px(100.0), Val::Px(100.0));
+    let button_size = Size::new(Val::Px(BUTTON_LENGTH), Val::Px(BUTTON_LENGTH));
 
-    // Side panel root node
-    commands
+    // Layout entities
+    let ui_root_entity = ui_root_query.single().unwrap();
+    let top_row_entity = commands
         .spawn_bundle(NodeBundle {
-            // FIXME: Set on right side of screen instead
-            style: Style {
-                size: Size::new(Val::Percent(50.0), Val::Percent(100.0)),
-                justify_content: JustifyContent::SpaceBetween,
-                ..Default::default()
-            },
-            material: materials.add(Color::BLACK.into()),
             ..Default::default()
         })
-        .with_children(|parent| {
-            // Input mode buttons
-            parent.spawn_bundle(BoardButtonBundle::<InputMode>::new_with_data(
-                button_size,
-                &*input_mode_button_materials,
-                InputMode::Fill,
-            ));
-            parent.spawn_bundle(BoardButtonBundle::<InputMode>::new_with_data(
-                button_size,
-                &*input_mode_button_materials,
-                InputMode::CenterMark,
-            ));
-            parent.spawn_bundle(BoardButtonBundle::<InputMode>::new_with_data(
-                button_size,
-                &*input_mode_button_materials,
-                InputMode::CornerMark,
-            ));
-            // New puzzle
-            parent.spawn_bundle(BoardButtonBundle::<NewPuzzle>::new(
-                button_size,
-                &*new_button_materials,
-            ));
+        .id();
+    let bottom_row_entity = commands
+        .spawn_bundle(NodeBundle {
+            ..Default::default()
+        })
+        .id();
 
-            // Reset puzzle
-            parent.spawn_bundle(BoardButtonBundle::<ResetPuzzle>::new(
-                button_size,
-                &*reset_button_materials,
-            ));
+    // Input mode buttons
+    let fill_button = commands
+        .spawn_bundle(BoardButtonBundle::<InputMode>::new_with_data(
+            button_size,
+            &*input_mode_button_materials,
+            InputMode::Fill,
+        ))
+        .id();
 
-            // Solve puzzle
-            parent.spawn_bundle(BoardButtonBundle::<SolvePuzzle>::new(
-                button_size,
-                &*solve_button_materials,
-            ));
-        });
+    let center_mark_button = commands
+        .spawn_bundle(BoardButtonBundle::<InputMode>::new_with_data(
+            button_size,
+            &*input_mode_button_materials,
+            InputMode::CenterMark,
+        ))
+        .id();
+
+    let corner_mark_button = commands
+        .spawn_bundle(BoardButtonBundle::<InputMode>::new_with_data(
+            button_size,
+            &*input_mode_button_materials,
+            InputMode::CornerMark,
+        ))
+        .id();
+
+    // Game control buttons
+    let new_game_button = commands
+        .spawn_bundle(BoardButtonBundle::<NewPuzzle>::new(
+            button_size,
+            &*new_button_materials,
+        ))
+        .id();
+
+    let reset_game_button = commands
+        .spawn_bundle(BoardButtonBundle::<ResetPuzzle>::new(
+            button_size,
+            &*reset_button_materials,
+        ))
+        .id();
+
+    let solve_game_button = commands
+        .spawn_bundle(BoardButtonBundle::<SolvePuzzle>::new(
+            button_size,
+            &*solve_button_materials,
+        ))
+        .id();
+
+    // Building our hierarchy
+    commands
+        .entity(ui_root_entity)
+        .push_children(&[top_row_entity, bottom_row_entity]);
+
+    commands.entity(top_row_entity).push_children(&[
+        fill_button,
+        center_mark_button,
+        corner_mark_button,
+    ]);
+
+    commands.entity(bottom_row_entity).push_children(&[
+        new_game_button,
+        reset_game_button,
+        solve_game_button,
+    ]);
 }
 /// Marker component for entities whose materials should not respond
 struct FixedMaterial;
