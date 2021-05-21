@@ -1,7 +1,7 @@
 /// Stores aesthetic configuration and handles asset loading
 use crate::{
-    interaction::{CellInput, InputMode},
-    ui::{ButtonMaterials, NewPuzzle, ResetPuzzle, SolvePuzzle},
+    graphics::ui::{ButtonMaterials, NewPuzzle, ResetPuzzle, SolvePuzzle},
+    input::interaction::{CellInput, InputMode},
 };
 use bevy::prelude::*;
 use std::marker::PhantomData;

@@ -2,12 +2,12 @@ use std::ops::DerefMut;
 
 /// Sudoku generation logic
 use crate::{
-    aesthetics::{FillableFont, FixedFont},
-    ui::{NewPuzzle, SolvePuzzle},
+    graphics::aesthetics::{FillableFont, FixedFont},
+    graphics::ui::{NewPuzzle, SolvePuzzle},
 };
 use crate::{
-    board::{Cell, Coordinates, DisplayedBy, Fixed, Value},
-    ui::ResetPuzzle,
+    graphics::ui::ResetPuzzle,
+    logic::board::{Cell, Coordinates, DisplayedBy, Fixed, Value},
 };
 use bevy::prelude::*;
 use bevy::utils::HashMap;

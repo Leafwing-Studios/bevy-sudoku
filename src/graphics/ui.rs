@@ -3,9 +3,8 @@ use std::marker::PhantomData;
 use bevy::{ecs::component::Component, prelude::*};
 
 use crate::{
-    aesthetics::{FixedFont, NUMBER_COLOR},
-    interaction::CellInput,
-    interaction::InputMode,
+    graphics::aesthetics::{FixedFont, NUMBER_COLOR},
+    input::interaction::{CellInput, InputMode},
 };
 
 use self::config::*;

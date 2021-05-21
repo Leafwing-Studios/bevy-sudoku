@@ -1,7 +1,7 @@
-use crate::board::{Cell, CenterMarks, CornerMarks, DisplayedBy, Fixed, Marks, Value};
+use crate::logic::board::{Cell, CenterMarks, CornerMarks, DisplayedBy, Fixed, Marks, Value};
 /// Player input handling for actually playing Sudoku
 use crate::{
-    aesthetics::{BACKGROUND_COLOR, SELECTION_COLOR},
+    graphics::aesthetics::{BACKGROUND_COLOR, SELECTION_COLOR},
     MainCamera,
 };
 use bevy::prelude::*;

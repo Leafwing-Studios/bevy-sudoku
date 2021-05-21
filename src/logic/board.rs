@@ -1,5 +1,5 @@
 /// Core data structures and setup logic for the Sudoku game board
-use crate::aesthetics::{
+use crate::graphics::aesthetics::{
     FixedFont, CELL_SIZE, GRID_BOT_EDGE, GRID_COLOR, GRID_LEFT_EDGE, GRID_SIZE,
     MAJOR_LINE_THICKNESS, MINOR_LINE_THICKNESS, NUMBER_COLOR,
 };
@@ -129,7 +129,7 @@ pub struct Fixed(pub bool);
 
 // FIXME: automatically shift with screen size
 pub mod setup {
-    use crate::aesthetics::{NUM_OFFSET_X, NUM_OFFSET_Y};
+    use crate::graphics::aesthetics::{NUM_OFFSET_X, NUM_OFFSET_Y};
 
     use super::*;
     pub struct SetupPlugin;
