@@ -55,7 +55,9 @@ struct NoneColor(Handle<ColorMaterial>);
 
 impl FromWorld for NoneColor {
     fn from_world(world: &mut World) -> Self {
-        let mut materials = world.get_resource_mut::<Assets<ColorMaterial>>().unwrap();
+        let mut materials = world
+            .get_resource_mut::<Assets<ColorMaterial>>()
+            .expect("ResMut<Assets<ColorMaterial>> not found.");
         NoneColor(materials.add(Color::NONE.into()))
     }
 }
@@ -292,7 +294,7 @@ fn spawn_buttons(
         .id();
 
     // Building our hierarchy, from bottom to top
-    let ui_root_entity = ui_root_query.single().unwrap();
+    let ui_root_entity = ui_root_query.single().expect("No UI root entity found.");
     commands.entity(ui_root_entity).push_children(&layout_nodes);
 
     // Number buttons

@@ -52,7 +52,9 @@ pub struct FixedFont(pub Handle<Font>);
 
 impl FromWorld for FixedFont {
     fn from_world(world: &mut World) -> Self {
-        let asset_server = world.get_resource_mut::<AssetServer>().unwrap();
+        let asset_server = world
+            .get_resource_mut::<AssetServer>()
+            .expect("ResMut<AssetServer> not found.");
         FixedFont(asset_server.load(FIXED_NUM_FONT))
     }
 }
@@ -61,14 +63,18 @@ pub struct FillableFont(pub Handle<Font>);
 
 impl FromWorld for FillableFont {
     fn from_world(world: &mut World) -> Self {
-        let asset_server = world.get_resource_mut::<AssetServer>().unwrap();
+        let asset_server = world
+            .get_resource_mut::<AssetServer>()
+            .expect("ResMut<AssetServer> not found.");
         FillableFont(asset_server.load(FILLABLE_NUM_FONT))
     }
 }
 
 impl FromWorld for ButtonMaterials<NewPuzzle> {
     fn from_world(world: &mut World) -> Self {
-        let mut materials = world.get_resource_mut::<Assets<ColorMaterial>>().unwrap();
+        let mut materials = world
+            .get_resource_mut::<Assets<ColorMaterial>>()
+            .expect("ResMut<Assets<ColorMaterial>> not found.");
         ButtonMaterials {
             normal: materials.add(Color::rgb(1.0, 0.15, 0.15).into()),
             hovered: materials.add(Color::rgb(0.25, 0.25, 0.25).into()),
@@ -80,7 +86,9 @@ impl FromWorld for ButtonMaterials<NewPuzzle> {
 
 impl FromWorld for ButtonMaterials<ResetPuzzle> {
     fn from_world(world: &mut World) -> Self {
-        let mut materials = world.get_resource_mut::<Assets<ColorMaterial>>().unwrap();
+        let mut materials = world
+            .get_resource_mut::<Assets<ColorMaterial>>()
+            .expect("ResMut<Assets<ColorMaterial>> not found.");
         ButtonMaterials {
             normal: materials.add(Color::rgb(0.15, 1.0, 0.15).into()),
             hovered: materials.add(Color::rgb(0.25, 0.25, 0.25).into()),
@@ -92,7 +100,9 @@ impl FromWorld for ButtonMaterials<ResetPuzzle> {
 
 impl FromWorld for ButtonMaterials<SolvePuzzle> {
     fn from_world(world: &mut World) -> Self {
-        let mut materials = world.get_resource_mut::<Assets<ColorMaterial>>().unwrap();
+        let mut materials = world
+            .get_resource_mut::<Assets<ColorMaterial>>()
+            .expect("ResMut<Assets<ColorMaterial>> not found.");
         ButtonMaterials {
             normal: materials.add(Color::rgb(0.15, 0.15, 1.0).into()),
             hovered: materials.add(Color::rgb(0.25, 0.25, 0.25).into()),
@@ -104,7 +114,9 @@ impl FromWorld for ButtonMaterials<SolvePuzzle> {
 
 impl FromWorld for ButtonMaterials<InputMode> {
     fn from_world(world: &mut World) -> Self {
-        let mut materials = world.get_resource_mut::<Assets<ColorMaterial>>().unwrap();
+        let mut materials = world
+            .get_resource_mut::<Assets<ColorMaterial>>()
+            .expect("ResMut<Assets<ColorMaterial>> not found.");
         ButtonMaterials {
             normal: materials.add(Color::rgb(0.15, 0.15, 0.15).into()),
             hovered: materials.add(Color::rgb(0.25, 0.25, 0.25).into()),
@@ -116,7 +128,9 @@ impl FromWorld for ButtonMaterials<InputMode> {
 
 impl FromWorld for ButtonMaterials<CellInput> {
     fn from_world(world: &mut World) -> Self {
-        let mut materials = world.get_resource_mut::<Assets<ColorMaterial>>().unwrap();
+        let mut materials = world
+            .get_resource_mut::<Assets<ColorMaterial>>()
+            .expect("ResMut<Assets<ColorMaterial>> not found.");
         ButtonMaterials {
             normal: materials.add(Color::rgb(0.8, 0.8, 0.8).into()),
             hovered: materials.add(Color::rgb(0.25, 0.25, 0.25).into()),

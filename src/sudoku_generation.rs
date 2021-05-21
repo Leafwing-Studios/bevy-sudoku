@@ -108,7 +108,10 @@ fn fill_puzzle(
     }
 
     for (coordinates, mut value, mut is_fixed) in query.iter_mut() {
-        let initial_value = initial_puzzle.numbers.get(coordinates).unwrap();
+        let initial_value = initial_puzzle
+            .numbers
+            .get(coordinates)
+            .expect("No values found in puzzle for these coordinates");
 
         // Fill in cells from initial puzzle and mark non-empty cells as fixed
         *value = initial_value.clone();
@@ -138,7 +141,9 @@ fn style_numbers(
 ) {
     for (is_fixed, displayed_by) in cell_query.iter() {
         for (text_entity, _) in displayed_by {
-            let mut text = text_query.get_mut(text_entity).unwrap();
+            let mut text = text_query
+                .get_mut(text_entity)
+                .expect("Corresponding text entity not found.");
             text.sections[0].style.font = match is_fixed.0 {
                 true => fixed_font_res.0.clone(),
                 false => fillable_font_res.0.clone(),
@@ -155,7 +160,10 @@ fn solve_sudoku(
 ) {
     for _ in event_reader.iter() {
         for (coordinates, mut value) in query.iter_mut() {
-            let correct_value = complete_puzzle.numbers.get(coordinates).unwrap();
+            let correct_value = complete_puzzle
+                .numbers
+                .get(coordinates)
+                .expect("No values found in puzzle for these coordinates");
 
             // Fill in cells from initial puzzle and mark those cells as fixed
             *value = correct_value.clone();

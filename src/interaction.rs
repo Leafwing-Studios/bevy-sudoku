@@ -73,12 +73,14 @@ fn cell_click(
 ) {
     if mouse_button_input.pressed(MouseButton::Left) {
         // Our game only has one window
-        let window = windows.get_primary().unwrap();
+        let window = windows.get_primary().expect("Primary window not found.");
         // These coordinates are in terms of the window's coordinates
         // and must be converted to the world coordinates used by our cell
-        let mut cursor_position = window.cursor_position().unwrap();
+        let mut cursor_position = window
+            .cursor_position()
+            .expect("Cursor position not found.");
         // QUALITY: use https://github.com/bevyengine/bevy/pull/1799 once merged instead
-        let camera_transform = camera_query.single().unwrap();
+        let camera_transform = camera_query.single().expect("Camera not found.");
         let window_size = Vec2::new(window.width() as f32, window.height() as f32);
 
         // World coordinates are measured from the center
@@ -128,14 +130,18 @@ fn handle_clicks(
             }
         // A grid cell was clicked
         } else {
-            let entity = click_event.selected_cell.unwrap();
+            let entity = click_event
+                .selected_cell
+                .expect("Click event has no associated entity!");
             // A drag click was used
             if click_event.drag {
                 // Select cells clicked
                 commands.entity(entity).insert(Selected);
             // A non-drag click was used
             } else {
-                let (_, maybe_selected, current_value) = cell_query.get(entity).unwrap();
+                let (_, maybe_selected, current_value) = cell_query.get(entity).expect(
+                    "cell_query contains no entity matching the entity in this click_event",
+                );
 
                 // Shift or control was held
                 if click_event.multi {
@@ -367,7 +373,9 @@ fn update_cell_numbers(
     use Value::*;
     for (cell_value, displayed_by) in cell_query.iter() {
         for (num_entity, _) in displayed_by {
-            let mut text = num_query.get_mut(num_entity).unwrap();
+            let mut text = num_query
+                .get_mut(num_entity)
+                .expect("No corresponding entity found!");
 
             // There is only one section in our text
             text.sections[0].value = match cell_value.clone() {
