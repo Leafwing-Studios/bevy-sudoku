@@ -67,13 +67,10 @@ pub mod setup {
     impl Plugin for SetupPlugin {
         fn build(&self, app: &mut AppBuilder) {
             app.add_startup_system(spawn_grid.system())
-                .add_startup_system(spawn_cells.system())
-                // Must occur in a new stage to ensure that the cells are initialized
+                // Must occur in an earlier stage to ensure that the cells are initialized
                 // as commands are not processed until the end of the stage
-                .add_startup_system_to_stage(
-                    crate::utils::SudokuStage::PostStartup,
-                    spawn_cell_numbers.system(),
-                );
+                .add_startup_system_to_stage(StartupStage::PreStartup, spawn_cells.system())
+                .add_startup_system(spawn_cell_numbers.system());
         }
     }
 

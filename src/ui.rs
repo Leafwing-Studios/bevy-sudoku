@@ -6,7 +6,6 @@ use crate::{
     aesthetics::{FixedFont, NUMBER_COLOR},
     interaction::CellInput,
     interaction::InputMode,
-    utils::SudokuStage,
 };
 
 use self::config::*;
@@ -26,8 +25,9 @@ pub struct BoardButtonsPlugin;
 impl Plugin for BoardButtonsPlugin {
     fn build(&self, app: &mut AppBuilder) {
         app.init_resource::<NoneColor>()
-            .add_startup_system(spawn_layout_boxes.system())
-            .add_startup_system_to_stage(SudokuStage::PostStartup, spawn_buttons.system())
+            // Must be complete before we can spawn buttons
+            .add_startup_system_to_stage(StartupStage::PreStartup, spawn_layout_boxes.system())
+            .add_startup_system(spawn_buttons.system())
             // Number input buttons
             .add_system(puzzle_button::<CellInput>.system().label("input"))
             // Puzzle control buttons

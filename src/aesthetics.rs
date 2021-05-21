@@ -38,7 +38,8 @@ pub struct AssetLoadingPlugin;
 
 impl Plugin for AssetLoadingPlugin {
     fn build(&self, app: &mut AppBuilder) {
-        app.add_startup_system(load_fonts.system())
+        app.init_resource::<FixedFont>()
+            .init_resource::<FillableFont>()
             .init_resource::<ButtonMaterials<NewPuzzle>>()
             .init_resource::<ButtonMaterials<ResetPuzzle>>()
             .init_resource::<ButtonMaterials<SolvePuzzle>>()
@@ -48,13 +49,21 @@ impl Plugin for AssetLoadingPlugin {
 }
 
 pub struct FixedFont(pub Handle<Font>);
+
+impl FromWorld for FixedFont {
+    fn from_world(world: &mut World) -> Self {
+        let asset_server = world.get_resource_mut::<AssetServer>().unwrap();
+        FixedFont(asset_server.load(FIXED_NUM_FONT))
+    }
+}
+
 pub struct FillableFont(pub Handle<Font>);
-/// Load in fonts from assets
-fn load_fonts(mut commands: Commands, asset_server: ResMut<AssetServer>) {
-    let fixed_handle = asset_server.load(FIXED_NUM_FONT);
-    commands.insert_resource(FixedFont(fixed_handle));
-    let fillable_handle = asset_server.load(FILLABLE_NUM_FONT);
-    commands.insert_resource(FillableFont(fillable_handle));
+
+impl FromWorld for FillableFont {
+    fn from_world(world: &mut World) -> Self {
+        let asset_server = world.get_resource_mut::<AssetServer>().unwrap();
+        FillableFont(asset_server.load(FILLABLE_NUM_FONT))
+    }
 }
 
 impl FromWorld for ButtonMaterials<NewPuzzle> {
