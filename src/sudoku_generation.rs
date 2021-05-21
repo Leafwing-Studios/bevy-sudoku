@@ -111,7 +111,7 @@ fn fill_puzzle(
         let initial_value = initial_puzzle.numbers.get(coordinates).unwrap();
 
         // Fill in cells from initial puzzle and mark non-empty cells as fixed
-        *value = *initial_value;
+        *value = initial_value.clone();
         is_fixed.0 = !(*initial_value == Value::Empty);
     }
 }
@@ -158,7 +158,7 @@ fn solve_sudoku(
             let correct_value = complete_puzzle.numbers.get(coordinates).unwrap();
 
             // Fill in cells from initial puzzle and mark those cells as fixed
-            *value = *correct_value;
+            *value = correct_value.clone();
         }
     }
 }

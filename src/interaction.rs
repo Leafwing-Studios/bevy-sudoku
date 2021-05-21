@@ -1,4 +1,4 @@
-use crate::board::{Cell, DisplayedBy, Fixed, Value};
+use crate::board::{Cell, CenterMarks, CornerMarks, DisplayedBy, Fixed, Marks, Value};
 /// Player input handling for actually playing Sudoku
 use crate::{
     aesthetics::{BACKGROUND_COLOR, SELECTION_COLOR},
@@ -224,7 +224,7 @@ fn color_selected(
 /// Events that change the value stored in a cell
 #[derive(Clone)]
 pub struct CellInput {
-    pub value: u8,
+    pub num: u8,
 }
 
 /// Contains keybindings for converting key presses into numbers
@@ -286,46 +286,80 @@ fn cell_keyboard_input(
         let maybe_value = input_map.get(key_code);
 
         if let Some(value) = maybe_value {
-            event_writer.send(CellInput { value: *value });
+            event_writer.send(CellInput { num: *value });
         }
     }
 }
 
-/// Set the value of the selected cells when 1-9 is pressed
+// QUALITY: refactor these to properly use a trait
+fn update_value_fill(old_value: &Value, new_num: u8) -> Value {
+    match old_value.clone() {
+        // Fill blank values with the key pressed
+        Value::Empty => Value::Filled(new_num),
+        // Overwrite markings with new value
+        Value::Marked(_, _) => Value::Filled(new_num),
+        Value::Filled(old_value) => {
+            // Remove existing values if they match
+            if old_value == new_num {
+                Value::Empty
+            } else {
+                // Otherwise overwrite them
+                Value::Filled(new_num)
+            }
+        }
+    }
+}
+
+fn update_value_center(old_value: &Value, num: u8) -> Value {
+    match old_value.clone() {
+        // Fill blank values with a center mark
+        Value::Empty => Value::Marked(CenterMarks::new(num), CornerMarks::default()),
+        // Update center marks with new value, adding it if it doesn't exist and removing it if it does
+        Value::Marked(center, corner) => Value::Marked(center.update(num), corner),
+        // Overwrite blank values with a center mark
+        Value::Filled(_) => Value::Marked(CenterMarks::new(num), CornerMarks::default()),
+    }
+}
+
+fn update_value_corner(old_value: &Value, num: u8) -> Value {
+    match old_value.clone() {
+        // Fill blank values with a corner mark
+        Value::Empty => Value::Marked(CenterMarks::default(), CornerMarks::new(num)),
+        // Update corner marks with new value, adding it if it doesn't exist and removing it if it does
+        Value::Marked(center, corner) => Value::Marked(center, corner.update(num)),
+        // Overwrite blank values with a center mark
+        Value::Filled(_) => Value::Marked(CenterMarks::default(), CornerMarks::new(num)),
+    }
+}
+
+/// Set the value of the selected cells from cell input events
 fn set_cell_value(
     mut query: Query<(&mut Value, &Fixed), With<Selected>>,
+    input_mode: Res<InputMode>,
     mut event_reader: EventReader<CellInput>,
 ) {
-    use Value::*;
+    use InputMode::*;
+    // FIXME: match on event's input type to control behavior
+    // Existing logic is for Fill only
     for event in event_reader.iter() {
-        for (mut value, is_fixed) in query.iter_mut() {
+        for (mut old_value, is_fixed) in query.iter_mut() {
             // Don't change the values of cells given by the puzzle
             if is_fixed.0 {
                 break;
             }
 
-            // Grab the value from the event that was sent
-            let new_value = event.value;
-
-            *value = match *value {
-                // Fill blank values with the key pressed
-                Empty => Filled(new_value),
-                // Overwrite markings with the key pressed
-                Marked(_, _) => Filled(new_value),
-                Filled(old_value) => {
-                    // Remove existing values if they match
-                    if old_value == new_value {
-                        Empty
-                    } else {
-                        // Otherwise overwrite them
-                        Filled(new_value)
-                    }
-                }
-            };
+            // The behavior of setting the cell's value varies based on which input mode we're in
+            *old_value = match *input_mode {
+                // Set the cell's value based on the event's contents
+                Fill => update_value_fill(&*old_value, event.num),
+                CenterMark => update_value_center(&*old_value, event.num),
+                CornerMark => update_value_corner(&*old_value, event.num),
+            }
         }
     }
 }
 
+/// Changes the cell displays to match their values
 fn update_cell_numbers(
     cell_query: Query<(&Value, &Relation<DisplayedBy>), (With<Cell>, Changed<Value>)>,
     mut num_query: Query<&mut Text>,
@@ -336,10 +370,14 @@ fn update_cell_numbers(
             let mut text = num_query.get_mut(num_entity).unwrap();
 
             // There is only one section in our text
-            text.sections[0].value = match *cell_value {
+            text.sections[0].value = match cell_value.clone() {
                 Filled(n) => n.to_string(),
                 // TODO: properly display markings
-                Marked(_, _) => "".to_string(),
+                Marked(center, corner) => {
+                    format!("Center: {}", center.to_string())
+                        + "|"
+                        + &format!("Corner: {}", corner.to_string())
+                }
                 Empty => "".to_string(),
             }
         }

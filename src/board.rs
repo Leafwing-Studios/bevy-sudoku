@@ -3,7 +3,7 @@ use crate::aesthetics::{
     FixedFont, CELL_SIZE, GRID_BOT_EDGE, GRID_COLOR, GRID_LEFT_EDGE, GRID_SIZE,
     MAJOR_LINE_THICKNESS, MINOR_LINE_THICKNESS, NUMBER_COLOR,
 };
-use bevy::prelude::*;
+use bevy::{prelude::*, utils::HashSet};
 
 pub struct Cell;
 #[derive(PartialEq, Eq, Hash, Clone, Debug)]
@@ -32,7 +32,7 @@ impl Coordinates {
 }
 
 /// The number(s) marked inside of each cell
-#[derive(PartialEq, Eq, Clone, Copy)]
+#[derive(PartialEq, Eq, Clone)]
 pub enum Value {
     /// No value is filled in this cell
     Empty,
@@ -42,13 +42,83 @@ pub enum Value {
     Marked(CenterMarks, CornerMarks),
 }
 
+/// Marks are notes about the possible value of a cell
+pub trait Marks: PartialEq + Eq + Clone {
+    /// Creates a new object with only the value entered as its contents
+    fn new(num: u8) -> Self;
+
+    /// Updates the value of the marks given a new input
+    fn update(&self, num: u8) -> Self;
+}
 /// The value of this cell could be any of the possibilities written in the center of the cell
-#[derive(PartialEq, Eq, Clone, Copy)]
-pub struct CenterMarks([bool; 9]);
+#[derive(PartialEq, Eq, Clone, Default)]
+pub struct CenterMarks(HashSet<u8>);
+
+impl Marks for CenterMarks {
+    fn new(num: u8) -> CenterMarks {
+        let mut marks = CenterMarks::default();
+        marks.0.insert(num);
+        marks
+    }
+
+    fn update(&self, num: u8) -> CenterMarks {
+        let mut out = self.clone();
+        if self.0.contains(&num) {
+            out.0.remove(&num);
+        } else {
+            out.0.insert(num);
+        }
+        out
+    }
+}
+
+impl ToString for CenterMarks {
+    fn to_string(&self) -> String {
+        let mut vec: Vec<_> = self.0.iter().collect();
+        // We want to return the numbers in order, but our storage type is unordered
+        vec.sort();
+        let maybe_string = vec.iter().map(|m| m.to_string()).reduce(|a, b| a + &b);
+        match maybe_string {
+            Some(string) => string,
+            None => "".to_string(),
+        }
+    }
+}
 
 /// The values marked in the corner of this cell must occur in these cells within the square
-#[derive(PartialEq, Eq, Clone, Copy)]
-pub struct CornerMarks([bool; 9]);
+#[derive(PartialEq, Eq, Clone, Default)]
+pub struct CornerMarks(HashSet<u8>);
+
+impl Marks for CornerMarks {
+    fn new(num: u8) -> CornerMarks {
+        let mut marks = CornerMarks::default();
+        marks.0.insert(num);
+        marks
+    }
+
+    fn update(&self, num: u8) -> CornerMarks {
+        let mut out = self.clone();
+        if self.0.contains(&num) {
+            out.0.remove(&num);
+        } else {
+            out.0.insert(num);
+        }
+        out
+    }
+}
+
+impl ToString for CornerMarks {
+    fn to_string(&self) -> String {
+        let mut vec: Vec<_> = self.0.iter().collect();
+        // We want to return the numbers in order, but our storage type is unordered
+        vec.sort();
+        let maybe_string = vec.iter().map(|m| m.to_string()).reduce(|a, b| a + &b);
+        match maybe_string {
+            Some(string) => string,
+            None => "".to_string(),
+        }
+    }
+}
 
 // Marker relation to designate that the Value on the source entity (the Cell entity)
 // is displayed by the target entity (the Text2d entity in the same location)

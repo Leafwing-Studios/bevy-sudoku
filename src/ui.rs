@@ -216,7 +216,7 @@ fn spawn_buttons(
     // Number input buttons
     let mut number_buttons = [Entity::new(0); 9];
     for i in 0..9 {
-        let value = i + 1;
+        let num = i + 1;
 
         const TEXT_ALIGNMENT: TextAlignment = TextAlignment {
             vertical: VerticalAlign::Center,
@@ -233,11 +233,11 @@ fn spawn_buttons(
             .spawn_bundle(BoardButtonBundle::<CellInput>::new_with_data(
                 num_button_size,
                 &*number_materials,
-                CellInput { value: value as u8 },
+                CellInput { num: num as u8 },
             ))
             .with_children(|parent| {
                 parent.spawn_bundle(TextBundle {
-                    text: Text::with_section(value.to_string(), text_style.clone(), TEXT_ALIGNMENT),
+                    text: Text::with_section(num.to_string(), text_style.clone(), TEXT_ALIGNMENT),
                     ..Default::default()
                 });
             })
