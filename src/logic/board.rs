@@ -1,9 +1,5 @@
-/// Core data structures and setup logic for the Sudoku game board
-use crate::graphics::aesthetics::{
-    FixedFont, CELL_SIZE, GRID_BOT_EDGE, GRID_COLOR, GRID_LEFT_EDGE, GRID_SIZE,
-    MAJOR_LINE_THICKNESS, MINOR_LINE_THICKNESS, NUMBER_COLOR,
-};
-use bevy::{prelude::*, utils::HashSet};
+/// Core data structures for the Sudoku game board
+use bevy::utils::HashSet;
 
 pub struct Cell;
 #[derive(PartialEq, Eq, Hash, Clone, Debug)]
@@ -41,6 +37,8 @@ pub enum Value {
     /// We have partial information about the state of this cell
     Marked(CenterMarks, CornerMarks),
 }
+/// A component that specifies whether digits were provided by the puzzle
+pub struct Fixed(pub bool);
 
 /// Marks are notes about the possible value of a cell
 pub trait Marks: PartialEq + Eq + Clone {
@@ -116,183 +114,6 @@ impl ToString for CornerMarks {
         match maybe_string {
             Some(string) => string,
             None => "".to_string(),
-        }
-    }
-}
-
-// Marker relation to designate that the Value on the source entity (the Cell entity)
-// is displayed by the target entity (the Text2d entity in the same location)
-pub struct DisplayedBy;
-
-/// A component that specifies whether digits were provided by the puzzle
-pub struct Fixed(pub bool);
-
-// FIXME: automatically shift with screen size
-pub mod setup {
-    use crate::graphics::aesthetics::{NUM_OFFSET_X, NUM_OFFSET_Y};
-
-    use super::*;
-    pub struct SetupPlugin;
-
-    impl Plugin for SetupPlugin {
-        fn build(&self, app: &mut AppBuilder) {
-            app.add_startup_system(spawn_grid.system())
-                // Must occur in an earlier stage to ensure that the cells are initialized
-                // as commands are not processed until the end of the stage
-                .add_startup_system_to_stage(StartupStage::PreStartup, spawn_cells.system())
-                .add_startup_system(spawn_cell_numbers.system());
-        }
-    }
-
-    fn spawn_grid(mut commands: Commands, mut materials: ResMut<Assets<ColorMaterial>>) {
-        let grid_handle = materials.add(GRID_COLOR.into());
-
-        for row in 0..=9 {
-            commands.spawn_bundle(new_gridline(
-                Orientation::Horizontal,
-                row,
-                grid_handle.clone(),
-            ));
-        }
-
-        for column in 0..=9 {
-            commands.spawn_bundle(new_gridline(
-                Orientation::Vertical,
-                column,
-                grid_handle.clone(),
-            ));
-        }
-    }
-
-    enum Orientation {
-        Horizontal,
-        Vertical,
-    }
-
-    fn new_gridline(
-        orientation: Orientation,
-        i: u8,
-        grid_handle: Handle<ColorMaterial>,
-    ) -> SpriteBundle {
-        // The grid lines that define the boxes need to be thicker
-        let thickness = if (i % 3) == 0 {
-            MAJOR_LINE_THICKNESS
-        } else {
-            MINOR_LINE_THICKNESS
-        };
-
-        let length = GRID_SIZE + thickness;
-
-        let size = match orientation {
-            Orientation::Horizontal => Vec2::new(length, thickness),
-            Orientation::Vertical => Vec2::new(thickness, length),
-        };
-
-        // Each objects' position is defined by its center
-        let offset = i as f32 * CELL_SIZE;
-
-        let (x, y) = match orientation {
-            Orientation::Horizontal => (GRID_LEFT_EDGE + 0.5 * GRID_SIZE, GRID_BOT_EDGE + offset),
-            Orientation::Vertical => (GRID_LEFT_EDGE + offset, GRID_BOT_EDGE + 0.5 * GRID_SIZE),
-        };
-
-        SpriteBundle {
-            sprite: Sprite::new(size),
-            // We want these grid lines to cover any cell that it might overlap with
-            transform: Transform::from_xyz(x, y, 1.0),
-            material: grid_handle,
-            ..Default::default()
-        }
-    }
-
-    fn spawn_cells(mut commands: Commands) {
-        for row in 1..=9 {
-            for column in 1..=9 {
-                commands.spawn_bundle(CellBundle::new(row, column));
-            }
-        }
-    }
-
-    #[derive(Bundle)]
-    struct CellBundle {
-        cell: Cell,
-        coordinates: Coordinates,
-        value: Value,
-        fixed: Fixed,
-        #[bundle]
-        cell_fill: SpriteBundle,
-    }
-
-    impl CellBundle {
-        fn new(row: u8, column: u8) -> Self {
-            let x = GRID_LEFT_EDGE + CELL_SIZE * row as f32 - 0.5 * CELL_SIZE;
-            let y = GRID_BOT_EDGE + CELL_SIZE * column as f32 - 0.5 * CELL_SIZE;
-
-            CellBundle {
-                cell: Cell,
-                coordinates: Coordinates {
-                    row,
-                    column,
-                    square: Coordinates::compute_square(row, column),
-                },
-                // No digits are filled in to begin with
-                value: Value::Empty,
-                fixed: Fixed(false),
-                cell_fill: SpriteBundle {
-                    // The material for this sprite begins with the same material as our background
-                    sprite: Sprite::new(Vec2::new(CELL_SIZE, CELL_SIZE)),
-                    // We want this cell to be covered by any grid lines that it might overlap with
-                    transform: Transform::from_xyz(x, y, 0.0),
-                    ..Default::default()
-                },
-            }
-        }
-    }
-
-    /// Marker component for the visual representation of a cell's values
-    pub struct CellNumber;
-
-    /// Adds a text number associated with each cell to display its value
-    fn spawn_cell_numbers(
-        query: Query<(Entity, &Transform), With<Cell>>,
-        mut commands: Commands,
-        font_res: Res<FixedFont>,
-    ) {
-        const TEXT_ALIGNMENT: TextAlignment = TextAlignment {
-            vertical: VerticalAlign::Center,
-            horizontal: HorizontalAlign::Center,
-        };
-
-        for (cell_entity, cell_transform) in query.iter() {
-            let mut number_transform = cell_transform.clone();
-
-            // Tweaks for aesthetic perfection
-            number_transform.translation.x += NUM_OFFSET_X;
-            number_transform.translation.y += NUM_OFFSET_Y;
-
-            // These numbers must be displayed on top of the cells they are in
-            number_transform.translation.z += 1.0;
-
-            let text_style = TextStyle {
-                font: font_res.0.clone(),
-                font_size: 0.8 * CELL_SIZE,
-                color: NUMBER_COLOR,
-            };
-
-            let text_entity = commands
-                .spawn_bundle(Text2dBundle {
-                    // This value begins empty, but then is later set in update_cell_numbers system
-                    // to match the cell's `value` field
-                    text: Text::with_section("", text_style.clone(), TEXT_ALIGNMENT),
-                    transform: number_transform,
-                    ..Default::default()
-                })
-                .insert(CellNumber)
-                .id();
-
-            commands
-                .entity(cell_entity)
-                .insert_relation(DisplayedBy, text_entity);
         }
     }
 }

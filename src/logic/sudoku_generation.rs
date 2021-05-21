@@ -1,13 +1,10 @@
 use std::ops::DerefMut;
 
 /// Sudoku generation logic
+use crate::graphics::buttons::{NewPuzzle, SolvePuzzle};
 use crate::{
-    graphics::aesthetics::{FillableFont, FixedFont},
-    graphics::ui::{NewPuzzle, SolvePuzzle},
-};
-use crate::{
-    graphics::ui::ResetPuzzle,
-    logic::board::{Cell, Coordinates, DisplayedBy, Fixed, Value},
+    graphics::buttons::ResetPuzzle,
+    logic::board::{Cell, Coordinates, Fixed, Value},
 };
 use bevy::prelude::*;
 use bevy::utils::HashMap;
@@ -21,8 +18,6 @@ impl Plugin for GenerationPlugin {
             .init_resource::<CompletePuzzle>()
             .add_startup_system(first_sudoku.system())
             .add_system(fill_puzzle.system().label("fill_puzzle"))
-            // Style the numbers after they're filled to ensure they're always correctly formatted
-            .add_system(style_numbers.system().after("fill_puzzle"))
             // Must occur before we fill the puzzle to ensure
             // that the new puzzle has been generated before we attempt to fill it
             .add_system(new_sudoku.system().before("fill_puzzle"))
@@ -129,26 +124,6 @@ fn reset_sudoku(
         // as if a new identical puzzle had been generated
         // QUALITY: use an explicit set_changed() method instead once added, see https://github.com/bevyengine/bevy/pull/2208
         initial_puzzle.deref_mut();
-    }
-}
-
-/// Sets the style of the numbers based on whether or not they're fixed
-fn style_numbers(
-    cell_query: Query<(&Fixed, &Relation<DisplayedBy>), Changed<Fixed>>,
-    mut text_query: Query<&mut Text>,
-    fixed_font_res: Res<FixedFont>,
-    fillable_font_res: Res<FillableFont>,
-) {
-    for (is_fixed, displayed_by) in cell_query.iter() {
-        for (text_entity, _) in displayed_by {
-            let mut text = text_query
-                .get_mut(text_entity)
-                .expect("Corresponding text entity not found.");
-            text.sections[0].style.font = match is_fixed.0 {
-                true => fixed_font_res.0.clone(),
-                false => fillable_font_res.0.clone(),
-            }
-        }
     }
 }
 

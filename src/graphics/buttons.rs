@@ -2,11 +2,10 @@ use std::marker::PhantomData;
 
 use bevy::{ecs::component::Component, prelude::*};
 
-use crate::{
-    graphics::aesthetics::{FixedFont, NUMBER_COLOR},
-    input::interaction::{CellInput, InputMode},
-};
+use super::board::assets::FixedFont;
+use crate::input::{input_mode::InputMode, CellInput};
 
+use self::assets::*;
 use self::config::*;
 
 mod config {
@@ -18,12 +17,105 @@ mod config {
     pub const NUM_BUTTON_LENGTH: f32 = 64.0;
 }
 
+mod assets {
+    use super::*;
+
+    /// The null, transparent color
+    pub struct NoneColor(pub Handle<ColorMaterial>);
+
+    impl FromWorld for NoneColor {
+        fn from_world(world: &mut World) -> Self {
+            let mut materials = world
+                .get_resource_mut::<Assets<ColorMaterial>>()
+                .expect("ResMut<Assets<ColorMaterial>> not found.");
+            NoneColor(materials.add(Color::NONE.into()))
+        }
+    }
+
+    impl FromWorld for ButtonMaterials<NewPuzzle> {
+        fn from_world(world: &mut World) -> Self {
+            let mut materials = world
+                .get_resource_mut::<Assets<ColorMaterial>>()
+                .expect("ResMut<Assets<ColorMaterial>> not found.");
+            ButtonMaterials {
+                normal: materials.add(Color::rgb(1.0, 0.15, 0.15).into()),
+                hovered: materials.add(Color::rgb(0.25, 0.25, 0.25).into()),
+                pressed: materials.add(Color::rgb(0.35, 0.75, 0.35).into()),
+                _marker: PhantomData,
+            }
+        }
+    }
+
+    impl FromWorld for ButtonMaterials<ResetPuzzle> {
+        fn from_world(world: &mut World) -> Self {
+            let mut materials = world
+                .get_resource_mut::<Assets<ColorMaterial>>()
+                .expect("ResMut<Assets<ColorMaterial>> not found.");
+            ButtonMaterials {
+                normal: materials.add(Color::rgb(0.15, 1.0, 0.15).into()),
+                hovered: materials.add(Color::rgb(0.25, 0.25, 0.25).into()),
+                pressed: materials.add(Color::rgb(0.35, 0.75, 0.35).into()),
+                _marker: PhantomData,
+            }
+        }
+    }
+
+    impl FromWorld for ButtonMaterials<SolvePuzzle> {
+        fn from_world(world: &mut World) -> Self {
+            let mut materials = world
+                .get_resource_mut::<Assets<ColorMaterial>>()
+                .expect("ResMut<Assets<ColorMaterial>> not found.");
+            ButtonMaterials {
+                normal: materials.add(Color::rgb(0.15, 0.15, 1.0).into()),
+                hovered: materials.add(Color::rgb(0.25, 0.25, 0.25).into()),
+                pressed: materials.add(Color::rgb(0.35, 0.75, 0.35).into()),
+                _marker: PhantomData,
+            }
+        }
+    }
+
+    impl FromWorld for ButtonMaterials<InputMode> {
+        fn from_world(world: &mut World) -> Self {
+            let mut materials = world
+                .get_resource_mut::<Assets<ColorMaterial>>()
+                .expect("ResMut<Assets<ColorMaterial>> not found.");
+            ButtonMaterials {
+                normal: materials.add(Color::rgb(0.15, 0.15, 0.15).into()),
+                hovered: materials.add(Color::rgb(0.25, 0.25, 0.25).into()),
+                pressed: materials.add(Color::rgb(0.35, 0.75, 0.35).into()),
+                _marker: PhantomData,
+            }
+        }
+    }
+
+    impl FromWorld for ButtonMaterials<CellInput> {
+        fn from_world(world: &mut World) -> Self {
+            let mut materials = world
+                .get_resource_mut::<Assets<ColorMaterial>>()
+                .expect("ResMut<Assets<ColorMaterial>> not found.");
+            ButtonMaterials {
+                normal: materials.add(Color::rgb(0.8, 0.8, 0.8).into()),
+                hovered: materials.add(Color::rgb(0.25, 0.25, 0.25).into()),
+                pressed: materials.add(Color::rgb(0.35, 0.75, 0.35).into()),
+                _marker: PhantomData,
+            }
+        }
+    }
+}
+
 pub struct BoardButtonsPlugin;
 
 // QUALITY: use system sets for clarity
 impl Plugin for BoardButtonsPlugin {
     fn build(&self, app: &mut AppBuilder) {
-        app.init_resource::<NoneColor>()
+        app
+            // ASSETS
+            .init_resource::<ButtonMaterials<NewPuzzle>>()
+            .init_resource::<ButtonMaterials<ResetPuzzle>>()
+            .init_resource::<ButtonMaterials<SolvePuzzle>>()
+            .init_resource::<ButtonMaterials<InputMode>>()
+            .init_resource::<ButtonMaterials<CellInput>>()
+            .init_resource::<NoneColor>()
             // Must be complete before we can spawn buttons
             .add_startup_system_to_stage(StartupStage::PreStartup, spawn_layout_boxes.system())
             .add_startup_system(spawn_buttons.system())
@@ -46,18 +138,6 @@ impl Plugin for BoardButtonsPlugin {
                     .after("input")
                     .after("responsive_buttons"),
             );
-    }
-}
-
-/// The null, transparent color
-struct NoneColor(Handle<ColorMaterial>);
-
-impl FromWorld for NoneColor {
-    fn from_world(world: &mut World) -> Self {
-        let mut materials = world
-            .get_resource_mut::<Assets<ColorMaterial>>()
-            .expect("ResMut<Assets<ColorMaterial>> not found.");
-        NoneColor(materials.add(Color::NONE.into()))
     }
 }
 
@@ -227,7 +307,7 @@ fn spawn_buttons(
         let text_style = TextStyle {
             font: font.0.clone(),
             font_size: 0.8 * NUM_BUTTON_LENGTH,
-            color: NUMBER_COLOR,
+            color: Color::BLACK,
         };
 
         number_buttons[i] = commands
