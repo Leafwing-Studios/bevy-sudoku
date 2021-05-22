@@ -62,6 +62,20 @@ pub enum Value {
     /// We have partial information about the state of this cell
     Marked(CenterMarks, CornerMarks),
 }
+
+impl Value {
+    /// Converts empty marks into an empty cell state
+    fn cleanup(&mut self) -> Value {
+        let empty_marks = Value::Marked(CenterMarks::default(), CornerMarks::default());
+
+        if *self == empty_marks {
+            return Value::Empty;
+        } else {
+            return self.clone();
+        }
+    }
+}
+
 /// A component that specifies whether digits were provided by the puzzle
 pub struct Fixed(pub bool);
 
@@ -166,8 +180,8 @@ pub fn set_cell_value(
             *old_value = match *input_mode {
                 // Set the cell's value based on the event's contents
                 Fill => update_value_fill(&*old_value, event.num),
-                CenterMark => update_value_center(&*old_value, event.num),
-                CornerMark => update_value_corner(&*old_value, event.num),
+                CenterMark => update_value_center(&*old_value, event.num).cleanup(),
+                CornerMark => update_value_corner(&*old_value, event.num).cleanup(),
             }
         }
     }
