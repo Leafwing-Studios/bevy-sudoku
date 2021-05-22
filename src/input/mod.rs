@@ -3,7 +3,6 @@ use bevy::prelude::*;
 use crate::CommonLabels;
 
 pub mod actions;
-pub mod input_mode;
 // These are low-level, and shouldn't need to be exposed
 mod keyboard;
 mod mouse;
@@ -16,7 +15,7 @@ impl Plugin for InteractionPlugin {
             .add_event::<CellInput>()
             .init_resource::<keyboard::cell_input::CellInputMap>()
             .init_resource::<mouse::cell_index::CellIndex>()
-            .init_resource::<input_mode::InputMode>()
+            .init_resource::<actions::InputMode>()
             // Should run before input to ensure mapping from position to cell is correct
             .add_system(
                 mouse::cell_index::index_cells

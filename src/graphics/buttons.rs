@@ -1,6 +1,6 @@
 use super::board::assets::FixedFont;
 use crate::{
-    input::{input_mode::InputMode, CellInput},
+    input::{actions::InputMode, CellInput},
     CommonLabels,
 };
 use bevy::{ecs::component::Component, prelude::*};

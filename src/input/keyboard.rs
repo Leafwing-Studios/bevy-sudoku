@@ -1,4 +1,4 @@
-use super::{input_mode::InputMode, CellInput, Selected};
+use super::{actions::InputMode, CellInput, Selected};
 use crate::logic::board::{Cell, Fixed, Value};
 use bevy::prelude::*;
 
