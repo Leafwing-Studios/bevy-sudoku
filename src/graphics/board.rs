@@ -47,13 +47,14 @@ mod config {
 
     // Sizes
     pub const CELL_SIZE: f32 = 50.0;
+    pub const FONT_SIZE: f32 = 30.0;
     pub const GRID_SIZE: f32 = 9.0 * CELL_SIZE;
     pub const MINOR_LINE_THICKNESS: f32 = 2.0;
     pub const MAJOR_LINE_THICKNESS: f32 = 4.0;
 
     // Positions
     pub const NUM_OFFSET_X: f32 = 0.0 * CELL_SIZE;
-    pub const NUM_OFFSET_Y: f32 = 0.03 * CELL_SIZE;
+    pub const NUM_OFFSET_Y: f32 = 0.5 * CELL_SIZE;
 }
 
 // QUALITY: reduce asset loading code duplication dramatically
@@ -264,9 +265,9 @@ mod setup {
                     flex_wrap: FlexWrap::Wrap,
                     // Do not lay this out relative to siblings
                     position_type: PositionType::Absolute,
-                    // Evenly space cells along the main axis, with no gaps at the end
+                    // Evenly space cells along the main (left-to-right) axis, with no gaps at the end
                     justify_content: JustifyContent::SpaceBetween,
-                    // Evenly space cells along the cross axis, with no gaps at the end
+                    // Evenly space cells along the cross (top-to-bottom) axis, with no gaps at the end
                     align_content: AlignContent::SpaceBetween,
                     ..Default::default()
                 },
@@ -278,7 +279,7 @@ mod setup {
         // Cell text
         let text_style = TextStyle {
             font: fixed_font.0.clone(),
-            font_size: 0.8 * CELL_SIZE,
+            font_size: FONT_SIZE,
             color: NUMBER_COLOR,
         };
 
@@ -292,16 +293,26 @@ mod setup {
         let mut i = 0;
         for row in 1..=9 {
             for column in 1..=9 {
+                // FIXME: color is not showing up
+                let cell_material = materials.add(Color::RED.into());
+                //let cell_material = none_color.0.clone();
+
                 cells[i] = commands
-                    .spawn_bundle(CellBundle::new(row, column))
+                    .spawn_bundle(CellBundle::new(row, column, cell_material))
                     .with_children(|parent| {
                         parent
                             .spawn_bundle(TextBundle {
                                 // This value begins empty, but then is later set in update_cell_numbers system
                                 // to match the cell's `value` field
-                                text: Text::with_section("", text_style.clone(), TEXT_ALIGNMENT),
+                                text: Text::with_section("3", text_style.clone(), TEXT_ALIGNMENT),
+                                // FIXME: does nothing
                                 // Tweaking for aesthetic perfection
                                 transform: Transform::from_xyz(NUM_OFFSET_X, NUM_OFFSET_Y, 0.0),
+                                style: Style {
+                                    // Don't lay this out; instead just use the standard center-based inheritance
+                                    position_type: PositionType::Absolute,
+                                    ..Default::default()
+                                },
                                 ..Default::default()
                             })
                             .insert(CellNumber);
@@ -314,10 +325,11 @@ mod setup {
         // Building our hierarchy
         commands
             .entity(grid_node)
+            // Must occur before grid nodes to ensure proper layering
+            .push_children(&[cells_node])
             // We need several seperate nodes due to differing layout strategies
             .push_children(&[horizontal_grid_node])
-            .push_children(&[vertical_grid_node])
-            .push_children(&[cells_node]);
+            .push_children(&[vertical_grid_node]);
 
         commands
             .entity(horizontal_grid_node)
@@ -330,7 +342,6 @@ mod setup {
         commands.entity(cells_node).push_children(&cells);
     }
 
-    // FIXME: use a button bundle
     #[derive(Bundle)]
     struct CellBundle {
         cell: Cell,
@@ -342,7 +353,7 @@ mod setup {
     }
 
     impl CellBundle {
-        fn new(row: u8, column: u8) -> Self {
+        fn new(row: u8, column: u8, material: Handle<ColorMaterial>) -> Self {
             CellBundle {
                 cell: Cell,
                 coordinates: Coordinates {
@@ -353,8 +364,17 @@ mod setup {
                 // No digits are filled in to begin with
                 value: Value::Empty,
                 fixed: Fixed(false),
-                // FIXME: configure properly
                 button: ButtonBundle {
+                    style: Style {
+                        size: Size::new(Val::Px(CELL_SIZE), Val::Px(CELL_SIZE)),
+                        // Controls left-right alignment of numbers
+                        justify_content: JustifyContent::Center,
+                        // FIXME: doesn't do anything
+                        // Controls top-bottom alignment of numbers
+                        align_content: AlignContent::Center,
+                        ..Default::default()
+                    },
+                    material: material.clone(),
                     ..Default::default()
                 },
             }
