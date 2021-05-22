@@ -13,6 +13,7 @@ fn main() {
         .add_plugin(graphics::board::BoardPlugin)
         .add_plugin(graphics::buttons::BoardButtonsPlugin)
         .add_plugin(input::InteractionPlugin)
+        .add_plugin(logic::board::LogicPlugin)
         .add_plugin(logic::sudoku_generation::GenerationPlugin)
         .add_system(bevy::input::system::exit_on_esc_system.system())
         .run();

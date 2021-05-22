@@ -2,9 +2,9 @@ use bevy::prelude::*;
 
 use crate::CommonLabels;
 
-pub mod actions;
+pub mod input_mode;
 // These are low-level, and shouldn't need to be exposed
-mod board;
+pub mod board;
 pub mod buttons;
 mod keyboard;
 
@@ -21,7 +21,7 @@ impl Plugin for InteractionPlugin {
             .add_event::<CellInput>()
             .init_resource::<keyboard::cell_input::CellInputMap>()
             .init_resource::<board::cell_index::CellIndex>()
-            .init_resource::<actions::InputMode>()
+            .init_resource::<input_mode::InputMode>()
             // Should run before input to ensure mapping from position to cell is correct
             .add_system(
                 board::cell_index::index_cells
@@ -45,14 +45,6 @@ impl Plugin for InteractionPlugin {
                     .with_system(keyboard::cell_input::cell_keyboard_input.system())
                     .with_system(keyboard::erase_selected_cells.system())
                     .with_system(keyboard::swap_input_mode.system()),
-            )
-            // ACTION HANDLING
-            .add_system_set(
-                SystemSet::new()
-                    .label(CommonLabels::Action)
-                    .after(CommonLabels::Input)
-                    .with_system(actions::handle_clicks.system())
-                    .with_system(actions::set_cell_value.system()),
             );
     }
 }

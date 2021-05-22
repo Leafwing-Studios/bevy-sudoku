@@ -2,7 +2,7 @@
 use super::board::assets::FixedFont;
 use crate::input::buttons::{NewPuzzle, ResetPuzzle, SolvePuzzle};
 use crate::{
-    input::{actions::InputMode, CellInput},
+    input::{input_mode::InputMode, CellInput},
     CommonLabels,
 };
 use bevy::{ecs::component::Component, prelude::*};

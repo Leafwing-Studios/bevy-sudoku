@@ -1,6 +1,6 @@
 use bevy::{ecs::component::Component, prelude::*};
 
-use super::actions::InputMode;
+use super::input_mode::InputMode;
 
 /// Marker component for NewPuzzle button
 #[derive(Default, Clone)]
