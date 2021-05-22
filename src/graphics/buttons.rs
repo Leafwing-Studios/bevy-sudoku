@@ -1,12 +1,48 @@
-use std::marker::PhantomData;
-
-use bevy::{ecs::component::Component, prelude::*};
-
 use super::board::assets::FixedFont;
 use crate::input::{input_mode::InputMode, CellInput};
+use bevy::{ecs::component::Component, prelude::*};
+use std::marker::PhantomData;
 
 use self::assets::*;
 use self::config::*;
+
+pub struct BoardButtonsPlugin;
+
+// QUALITY: use system sets for clarity
+impl Plugin for BoardButtonsPlugin {
+    fn build(&self, app: &mut AppBuilder) {
+        app
+            // ASSETS
+            .init_resource::<ButtonMaterials<NewPuzzle>>()
+            .init_resource::<ButtonMaterials<ResetPuzzle>>()
+            .init_resource::<ButtonMaterials<SolvePuzzle>>()
+            .init_resource::<ButtonMaterials<InputMode>>()
+            .init_resource::<ButtonMaterials<CellInput>>()
+            .init_resource::<NoneColor>()
+            // Must be complete before we can spawn buttons
+            .add_startup_system_to_stage(StartupStage::PreStartup, spawn_layout_boxes.system())
+            .add_startup_system(spawn_buttons.system())
+            // Number input buttons
+            .add_system(puzzle_button::<CellInput>.system().label("input"))
+            // Puzzle control buttons
+            .add_system(responsive_buttons.system().label("responsive_buttons"))
+            .add_event::<NewPuzzle>()
+            .add_system(puzzle_button::<NewPuzzle>.system())
+            .add_event::<ResetPuzzle>()
+            .add_system(puzzle_button::<ResetPuzzle>.system())
+            .add_event::<SolvePuzzle>()
+            .add_system(puzzle_button::<SolvePuzzle>.system())
+            // Input mode buttons
+            .add_system(input_mode_buttons.system().label("input"))
+            // Must overwrite default button responsivity for selected input mode
+            .add_system(
+                show_selected_input_mode
+                    .system()
+                    .after("input")
+                    .after("responsive_buttons"),
+            );
+    }
+}
 
 mod config {
     // The horizontal percentage of the screen that the UI panel takes up
@@ -17,6 +53,7 @@ mod config {
     pub const NUM_BUTTON_LENGTH: f32 = 64.0;
 }
 
+// QUALITY: reduce asset loading code duplication dramatically
 mod assets {
     use super::*;
 
@@ -31,6 +68,22 @@ mod assets {
             NoneColor(materials.add(Color::NONE.into()))
         }
     }
+
+    /// Resource that contains the raw materials for each button type
+    /// corresponding to the Marker type marker component
+    pub struct ButtonMaterials<Marker: Component> {
+        pub normal: Handle<ColorMaterial>,
+        pub hovered: Handle<ColorMaterial>,
+        pub pressed: Handle<ColorMaterial>,
+        pub _marker: PhantomData<Marker>,
+    }
+
+    /// Component for the material of a button at rest
+    pub struct NormalMaterial(pub Handle<ColorMaterial>);
+    /// Component for the material of a button when hovered
+    pub struct HoveredMaterial(pub Handle<ColorMaterial>);
+    /// Component for the material of a button when pressed
+    pub struct PressedMaterial(pub Handle<ColorMaterial>);
 
     impl FromWorld for ButtonMaterials<NewPuzzle> {
         fn from_world(world: &mut World) -> Self {
@@ -103,60 +156,6 @@ mod assets {
     }
 }
 
-pub struct BoardButtonsPlugin;
-
-// QUALITY: use system sets for clarity
-impl Plugin for BoardButtonsPlugin {
-    fn build(&self, app: &mut AppBuilder) {
-        app
-            // ASSETS
-            .init_resource::<ButtonMaterials<NewPuzzle>>()
-            .init_resource::<ButtonMaterials<ResetPuzzle>>()
-            .init_resource::<ButtonMaterials<SolvePuzzle>>()
-            .init_resource::<ButtonMaterials<InputMode>>()
-            .init_resource::<ButtonMaterials<CellInput>>()
-            .init_resource::<NoneColor>()
-            // Must be complete before we can spawn buttons
-            .add_startup_system_to_stage(StartupStage::PreStartup, spawn_layout_boxes.system())
-            .add_startup_system(spawn_buttons.system())
-            // Number input buttons
-            .add_system(puzzle_button::<CellInput>.system().label("input"))
-            // Puzzle control buttons
-            .add_system(responsive_buttons.system().label("responsive_buttons"))
-            .add_event::<NewPuzzle>()
-            .add_system(puzzle_button::<NewPuzzle>.system())
-            .add_event::<ResetPuzzle>()
-            .add_system(puzzle_button::<ResetPuzzle>.system())
-            .add_event::<SolvePuzzle>()
-            .add_system(puzzle_button::<SolvePuzzle>.system())
-            // Input mode buttons
-            .add_system(input_mode_buttons.system().label("input"))
-            // Must overwrite default button responsivity for selected input mode
-            .add_system(
-                show_selected_input_mode
-                    .system()
-                    .after("input")
-                    .after("responsive_buttons"),
-            );
-    }
-}
-
-/// Resource that contains the raw materials for each button type
-/// corresponding to the Marker type marker component
-pub struct ButtonMaterials<Marker: Component> {
-    pub normal: Handle<ColorMaterial>,
-    pub hovered: Handle<ColorMaterial>,
-    pub pressed: Handle<ColorMaterial>,
-    pub _marker: PhantomData<Marker>,
-}
-
-/// Component for the material of a button at rest
-struct NormalMaterial(Handle<ColorMaterial>);
-/// Component for the material of a button when hovered
-struct HoveredMaterial(Handle<ColorMaterial>);
-/// Component for the material of a button when pressed
-struct PressedMaterial(Handle<ColorMaterial>);
-
 #[derive(Bundle)]
 struct BoardButtonBundle<Marker: Component> {
     marker: Marker,
@@ -203,10 +202,13 @@ impl<Marker: Component> BoardButtonBundle<Marker> {
     }
 }
 
+/// Marker component for NewPuzzle button
 #[derive(Default, Clone)]
 pub struct NewPuzzle;
+/// Marker component for ResetPuzzle button
 #[derive(Default, Clone)]
 pub struct ResetPuzzle;
+/// Marker component for SolvePuzzle button
 #[derive(Default, Clone)]
 pub struct SolvePuzzle;
 
@@ -403,6 +405,7 @@ fn spawn_buttons(
         solve_game_button,
     ]);
 }
+
 /// Marker component for entities whose materials should not respond
 struct FixedMaterial;
 

@@ -1,5 +1,5 @@
 /// Core data structures for the Sudoku game board
-use bevy::utils::HashSet;
+use self::marks::{CenterMarks, CornerMarks};
 
 pub struct Cell;
 #[derive(PartialEq, Eq, Hash, Clone, Debug)]
@@ -40,80 +40,83 @@ pub enum Value {
 /// A component that specifies whether digits were provided by the puzzle
 pub struct Fixed(pub bool);
 
-/// Marks are notes about the possible value of a cell
-pub trait Marks: PartialEq + Eq + Clone {
-    /// Creates a new object with only the value entered as its contents
-    fn new(num: u8) -> Self;
+pub mod marks {
+    use bevy::utils::HashSet;
+    /// Marks are notes about the possible value of a cell
+    pub trait Marks: PartialEq + Eq + Clone {
+        /// Creates a new object with only the value entered as its contents
+        fn new(num: u8) -> Self;
 
-    /// Updates the value of the marks given a new input
-    fn update(&self, num: u8) -> Self;
-}
-/// The value of this cell could be any of the possibilities written in the center of the cell
-#[derive(PartialEq, Eq, Clone, Default)]
-pub struct CenterMarks(HashSet<u8>);
-
-impl Marks for CenterMarks {
-    fn new(num: u8) -> CenterMarks {
-        let mut marks = CenterMarks::default();
-        marks.0.insert(num);
-        marks
+        /// Updates the value of the marks given a new input
+        fn update(&self, num: u8) -> Self;
     }
+    /// The value of this cell could be any of the possibilities written in the center of the cell
+    #[derive(PartialEq, Eq, Clone, Default)]
+    pub struct CenterMarks(HashSet<u8>);
 
-    fn update(&self, num: u8) -> CenterMarks {
-        let mut out = self.clone();
-        if self.0.contains(&num) {
-            out.0.remove(&num);
-        } else {
-            out.0.insert(num);
+    impl Marks for CenterMarks {
+        fn new(num: u8) -> CenterMarks {
+            let mut marks = CenterMarks::default();
+            marks.0.insert(num);
+            marks
         }
-        out
-    }
-}
 
-impl ToString for CenterMarks {
-    fn to_string(&self) -> String {
-        let mut vec: Vec<_> = self.0.iter().collect();
-        // We want to return the numbers in order, but our storage type is unordered
-        vec.sort();
-        let maybe_string = vec.iter().map(|m| m.to_string()).reduce(|a, b| a + &b);
-        match maybe_string {
-            Some(string) => string,
-            None => "".to_string(),
+        fn update(&self, num: u8) -> CenterMarks {
+            let mut out = self.clone();
+            if self.0.contains(&num) {
+                out.0.remove(&num);
+            } else {
+                out.0.insert(num);
+            }
+            out
         }
     }
-}
 
-/// The values marked in the corner of this cell must occur in these cells within the square
-#[derive(PartialEq, Eq, Clone, Default)]
-pub struct CornerMarks(HashSet<u8>);
-
-impl Marks for CornerMarks {
-    fn new(num: u8) -> CornerMarks {
-        let mut marks = CornerMarks::default();
-        marks.0.insert(num);
-        marks
-    }
-
-    fn update(&self, num: u8) -> CornerMarks {
-        let mut out = self.clone();
-        if self.0.contains(&num) {
-            out.0.remove(&num);
-        } else {
-            out.0.insert(num);
+    impl ToString for CenterMarks {
+        fn to_string(&self) -> String {
+            let mut vec: Vec<_> = self.0.iter().collect();
+            // We want to return the numbers in order, but our storage type is unordered
+            vec.sort();
+            let maybe_string = vec.iter().map(|m| m.to_string()).reduce(|a, b| a + &b);
+            match maybe_string {
+                Some(string) => string,
+                None => "".to_string(),
+            }
         }
-        out
     }
-}
 
-impl ToString for CornerMarks {
-    fn to_string(&self) -> String {
-        let mut vec: Vec<_> = self.0.iter().collect();
-        // We want to return the numbers in order, but our storage type is unordered
-        vec.sort();
-        let maybe_string = vec.iter().map(|m| m.to_string()).reduce(|a, b| a + &b);
-        match maybe_string {
-            Some(string) => string,
-            None => "".to_string(),
+    /// The values marked in the corner of this cell must occur in these cells within the square
+    #[derive(PartialEq, Eq, Clone, Default)]
+    pub struct CornerMarks(HashSet<u8>);
+
+    impl Marks for CornerMarks {
+        fn new(num: u8) -> CornerMarks {
+            let mut marks = CornerMarks::default();
+            marks.0.insert(num);
+            marks
+        }
+
+        fn update(&self, num: u8) -> CornerMarks {
+            let mut out = self.clone();
+            if self.0.contains(&num) {
+                out.0.remove(&num);
+            } else {
+                out.0.insert(num);
+            }
+            out
+        }
+    }
+
+    impl ToString for CornerMarks {
+        fn to_string(&self) -> String {
+            let mut vec: Vec<_> = self.0.iter().collect();
+            // We want to return the numbers in order, but our storage type is unordered
+            vec.sort();
+            let maybe_string = vec.iter().map(|m| m.to_string()).reduce(|a, b| a + &b);
+            match maybe_string {
+                Some(string) => string,
+                None => "".to_string(),
+            }
         }
     }
 }

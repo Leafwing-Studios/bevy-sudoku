@@ -1,4 +1,7 @@
-use crate::logic::board::{CenterMarks, CornerMarks, Marks, Value};
+use crate::logic::board::{
+    marks::{CenterMarks, CornerMarks, Marks},
+    Value,
+};
 
 /// Different ways to enter a number into a cell
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]

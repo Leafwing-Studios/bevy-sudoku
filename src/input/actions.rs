@@ -1,9 +1,8 @@
-use bevy::prelude::*;
-
 use crate::{
     input::input_mode::{update_value_center, update_value_corner, update_value_fill},
     logic::board::{Cell, Fixed, Value},
 };
+use bevy::prelude::*;
 
 use super::{input_mode::InputMode, mouse::CellClick, CellInput, Selected};
 

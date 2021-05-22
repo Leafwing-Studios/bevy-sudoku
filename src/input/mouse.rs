@@ -1,3 +1,5 @@
+use self::cell_index::CellIndex;
+use crate::{graphics::MainCamera, logic::board::Cell};
 use bevy::prelude::*;
 
 /// Event to dispatch cell clicks
@@ -8,66 +10,6 @@ pub struct CellClick {
     pub multi: bool,
     /// Was the mouse dragged
     pub drag: bool,
-}
-
-use bevy::utils::HashMap;
-
-use crate::{graphics::MainCamera, logic::board::Cell};
-/// An index that allows us to look up the entity at the correct position
-#[derive(Default)]
-pub struct CellIndex {
-    pub cell_map: HashMap<Entity, BoundingBox>,
-}
-
-impl CellIndex {
-    pub fn get(&self, position: Vec2) -> Option<Entity> {
-        // This is a slow and naive linear-time approach to spatial indexing
-        // But it works fine for 81 items!
-        for (entity, bounding_box) in self.cell_map.iter() {
-            // Checks if the position is in the bounding box on both x and y
-            let in_bounds =
-                position.cmpge(bounding_box.bottom_left) & position.cmple(bounding_box.top_right);
-            // Only returns true if it's inside the box on both x and y
-            if in_bounds.all() {
-                // This early return of a single item only works correctly
-                // because we know our entitities never overlap
-                // We would need a way to break ties otherwise
-                return Some(*entity);
-            }
-        }
-        // Return None if no matches found
-        None
-    }
-}
-
-/// Builds a `CellIndex` for cells whose `Transform` has been changed
-pub fn index_cells(
-    query: Query<(Entity, &Sprite, &Transform), (With<Cell>, Changed<Transform>)>,
-    mut cell_index: ResMut<CellIndex>,
-) {
-    // Our Changed<Transform> filter ensures that this system only does work
-    // on entities whose Transforms were added or mutated since the last time
-    // this system ran
-    for (entity, sprite, transform) in query.iter() {
-        let center = transform.translation.truncate();
-        let bottom_left = center - sprite.size / 2.0;
-        let top_right = center + sprite.size / 2.0;
-
-        // .insert overwrites existing values
-        cell_index.cell_map.insert(
-            entity,
-            BoundingBox {
-                bottom_left,
-                top_right,
-            },
-        );
-    }
-}
-
-/// The axis-aligned rectangle that contains our cells
-pub struct BoundingBox {
-    pub bottom_left: Vec2,
-    pub top_right: Vec2,
 }
 
 /// Turns raw clicks into `CellClick` events
@@ -119,5 +61,66 @@ pub fn cell_click(
             multi,
             drag,
         })
+    }
+}
+
+pub mod cell_index {
+    use super::*;
+    use bevy::utils::HashMap;
+    /// An index that allows us to look up the entity at the correct position
+    #[derive(Default)]
+    pub struct CellIndex {
+        pub cell_map: HashMap<Entity, BoundingBox>,
+    }
+
+    impl CellIndex {
+        pub fn get(&self, position: Vec2) -> Option<Entity> {
+            // This is a slow and naive linear-time approach to spatial indexing
+            // But it works fine for 81 items!
+            for (entity, bounding_box) in self.cell_map.iter() {
+                // Checks if the position is in the bounding box on both x and y
+                let in_bounds = position.cmpge(bounding_box.bottom_left)
+                    & position.cmple(bounding_box.top_right);
+                // Only returns true if it's inside the box on both x and y
+                if in_bounds.all() {
+                    // This early return of a single item only works correctly
+                    // because we know our entitities never overlap
+                    // We would need a way to break ties otherwise
+                    return Some(*entity);
+                }
+            }
+            // Return None if no matches found
+            None
+        }
+    }
+
+    /// Builds a `CellIndex` for cells whose `Transform` has been changed
+    pub fn index_cells(
+        query: Query<(Entity, &Sprite, &Transform), (With<Cell>, Changed<Transform>)>,
+        mut cell_index: ResMut<CellIndex>,
+    ) {
+        // Our Changed<Transform> filter ensures that this system only does work
+        // on entities whose Transforms were added or mutated since the last time
+        // this system ran
+        for (entity, sprite, transform) in query.iter() {
+            let center = transform.translation.truncate();
+            let bottom_left = center - sprite.size / 2.0;
+            let top_right = center + sprite.size / 2.0;
+
+            // .insert overwrites existing values
+            cell_index.cell_map.insert(
+                entity,
+                BoundingBox {
+                    bottom_left,
+                    top_right,
+                },
+            );
+        }
+    }
+
+    /// The axis-aligned rectangle that contains our cells
+    pub struct BoundingBox {
+        pub bottom_left: Vec2,
+        pub top_right: Vec2,
     }
 }

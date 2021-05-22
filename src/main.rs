@@ -1,4 +1,4 @@
-use bevy::{input::system::exit_on_esc_system, prelude::*};
+use bevy::prelude::*;
 
 mod graphics;
 mod input;
@@ -13,6 +13,6 @@ fn main() {
         .add_plugin(graphics::buttons::BoardButtonsPlugin)
         .add_plugin(input::InteractionPlugin)
         .add_plugin(logic::sudoku_generation::GenerationPlugin)
-        .add_system(exit_on_esc_system.system())
+        .add_system(bevy::input::system::exit_on_esc_system.system())
         .run();
 }
