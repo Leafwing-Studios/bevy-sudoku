@@ -4,21 +4,27 @@ use crate::CommonLabels;
 
 pub mod actions;
 // These are low-level, and shouldn't need to be exposed
+mod board;
+pub mod buttons;
 mod keyboard;
-mod mouse;
 
 pub struct InteractionPlugin;
 
 impl Plugin for InteractionPlugin {
     fn build(&self, app: &mut AppBuilder) {
-        app.add_event::<mouse::CellClick>()
+        app
+            // INPUT EVENTS
+            .add_event::<buttons::NewPuzzle>()
+            .add_event::<buttons::ResetPuzzle>()
+            .add_event::<buttons::SolvePuzzle>()
+            .add_event::<board::CellClick>()
             .add_event::<CellInput>()
             .init_resource::<keyboard::cell_input::CellInputMap>()
-            .init_resource::<mouse::cell_index::CellIndex>()
+            .init_resource::<board::cell_index::CellIndex>()
             .init_resource::<actions::InputMode>()
             // Should run before input to ensure mapping from position to cell is correct
             .add_system(
-                mouse::cell_index::index_cells
+                board::cell_index::index_cells
                     .system()
                     .before(CommonLabels::Input),
             )
@@ -26,7 +32,15 @@ impl Plugin for InteractionPlugin {
             .add_system_set(
                 SystemSet::new()
                     .label(CommonLabels::Input)
-                    .with_system(mouse::cell_click.system())
+                    // BOARD
+                    .with_system(board::cell_click.system())
+                    // BUTTONS
+                    .with_system(buttons::puzzle_button::<buttons::NewPuzzle>.system())
+                    .with_system(buttons::puzzle_button::<buttons::ResetPuzzle>.system())
+                    .with_system(buttons::puzzle_button::<buttons::SolvePuzzle>.system())
+                    .with_system(buttons::puzzle_button::<CellInput>.system())
+                    .with_system(buttons::input_mode_buttons.system())
+                    // KEYBOARD
                     .with_system(keyboard::select_all.system())
                     .with_system(keyboard::cell_input::cell_keyboard_input.system())
                     .with_system(keyboard::erase_selected_cells.system())

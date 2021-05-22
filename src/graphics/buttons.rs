@@ -1,5 +1,6 @@
 /// Build and display the UI buttons
 use super::board::assets::FixedFont;
+use crate::input::buttons::{NewPuzzle, ResetPuzzle, SolvePuzzle};
 use crate::{
     input::{actions::InputMode, CellInput},
     CommonLabels,
@@ -25,27 +26,20 @@ impl Plugin for BoardButtonsPlugin {
             .init_resource::<NoneColor>()
             // SETUP
             // Must be complete before we can spawn buttons
-            .add_startup_system_to_stage(StartupStage::PreStartup, spawn_layout_boxes.system())
-            .add_startup_system(spawn_buttons.system())
-            // INPUT EVENTS
-            .add_event::<NewPuzzle>()
-            .add_event::<ResetPuzzle>()
-            .add_event::<SolvePuzzle>()
-            // BUTTON LOGIC
-            .add_system_set(
-                SystemSet::new()
-                    .label(CommonLabels::Input)
-                    .with_system(puzzle_button::<NewPuzzle>.system())
-                    .with_system(puzzle_button::<ResetPuzzle>.system())
-                    .with_system(puzzle_button::<SolvePuzzle>.system())
-                    .with_system(puzzle_button::<CellInput>.system())
-                    .with_system(input_mode_buttons.system()),
+            .add_startup_system_to_stage(
+                StartupStage::PreStartup,
+                setup::spawn_layout_boxes.system(),
             )
+            .add_startup_system(setup::spawn_buttons.system())
             // ACTIONS
-            .add_system(responsive_buttons.system().label(CommonLabels::Action))
+            .add_system(
+                actions::responsive_buttons
+                    .system()
+                    .label(CommonLabels::Action),
+            )
             // Must overwrite default button responsivity for selected input mode
             .add_system(
-                show_selected_input_mode
+                actions::show_selected_input_mode
                     .system()
                     .after(CommonLabels::Action),
             );
@@ -64,7 +58,6 @@ mod config {
 // QUALITY: reduce asset loading code duplication dramatically
 mod assets {
     use super::*;
-
     /// The null, transparent color
     pub struct NoneColor(pub Handle<ColorMaterial>);
 
@@ -164,330 +157,310 @@ mod assets {
     }
 }
 
-#[derive(Bundle)]
-struct BoardButtonBundle<Marker: Component> {
-    marker: Marker,
-    #[bundle]
-    button_bundle: ButtonBundle,
-    normal_material: NormalMaterial,
-    hovered_material: HoveredMaterial,
-    pressed_material: PressedMaterial,
-}
-
-impl<Marker: Component + Default> BoardButtonBundle<Marker> {
-    fn new(size: Size<Val>, materials: &ButtonMaterials<Marker>) -> Self {
-        let data = Marker::default();
-        Self::new_with_data(size, materials, data)
+mod setup {
+    use super::*;
+    #[derive(Bundle)]
+    struct BoardButtonBundle<Marker: Component> {
+        marker: Marker,
+        #[bundle]
+        button_bundle: ButtonBundle,
+        normal_material: NormalMaterial,
+        hovered_material: HoveredMaterial,
+        pressed_material: PressedMaterial,
     }
-}
 
-impl<Marker: Component> BoardButtonBundle<Marker> {
-    fn new_with_data(size: Size<Val>, materials: &ButtonMaterials<Marker>, data: Marker) -> Self {
-        let normal_material = materials.normal.clone();
-        let hovered_material = materials.hovered.clone();
-        let pressed_material = materials.pressed.clone();
-
-        BoardButtonBundle {
-            marker: data,
-            button_bundle: ButtonBundle {
-                style: Style {
-                    size,
-                    // Padding between buttons
-                    margin: Rect::all(Val::Px(5.0)),
-                    // Horizontally center child text
-                    justify_content: JustifyContent::Center,
-                    // Vertically center child text
-                    align_items: AlignItems::Center,
-                    ..Default::default()
-                },
-                material: normal_material.clone(),
-                ..Default::default()
-            },
-            normal_material: NormalMaterial(normal_material),
-            hovered_material: HoveredMaterial(hovered_material),
-            pressed_material: PressedMaterial(pressed_material),
+    impl<Marker: Component + Default> BoardButtonBundle<Marker> {
+        fn new(size: Size<Val>, materials: &ButtonMaterials<Marker>) -> Self {
+            let data = Marker::default();
+            Self::new_with_data(size, materials, data)
         }
     }
-}
 
-/// Marker component for NewPuzzle button
-#[derive(Default, Clone)]
-pub struct NewPuzzle;
-/// Marker component for ResetPuzzle button
-#[derive(Default, Clone)]
-pub struct ResetPuzzle;
-/// Marker component for SolvePuzzle button
-#[derive(Default, Clone)]
-pub struct SolvePuzzle;
+    impl<Marker: Component> BoardButtonBundle<Marker> {
+        fn new_with_data(
+            size: Size<Val>,
+            materials: &ButtonMaterials<Marker>,
+            data: Marker,
+        ) -> Self {
+            let normal_material = materials.normal.clone();
+            let hovered_material = materials.hovered.clone();
+            let pressed_material = materials.pressed.clone();
 
-/// Marker component for layout box of Sudoku game elements
-struct SudokuBox;
-/// Marker component for layout box of UI elements
-struct UiBox;
-
-/// Spawns layout-only nodes for storing the game's user interface
-fn spawn_layout_boxes(mut commands: Commands, none_color: Res<NoneColor>) {
-    // Global root node
-    commands
-        .spawn_bundle(NodeBundle {
-            style: Style {
-                size: Size::new(Val::Percent(100.0), Val::Percent(100.0)),
-                ..Default::default()
-            },
-            material: none_color.0.clone(),
-            ..Default::default()
-        })
-        .with_children(|parent| {
-            // Sudoku on left
-            parent
-                .spawn_bundle(NodeBundle {
+            BoardButtonBundle {
+                marker: data,
+                button_bundle: ButtonBundle {
                     style: Style {
-                        size: Size::new(Val::Percent(100.0 - UI_FRACTION), Val::Percent(100.0)),
-                        ..Default::default()
-                    },
-                    material: none_color.0.clone(),
-                    ..Default::default()
-                })
-                .insert(SudokuBox);
-
-            // Interface on right
-            parent
-                .spawn_bundle(NodeBundle {
-                    style: Style {
-                        size: Size::new(Val::Percent(UI_FRACTION), Val::Percent(100.0)),
-                        // UI elements are arranged in stacked rows, growing from the bottom
-                        flex_direction: FlexDirection::ColumnReverse,
-                        // Don't wrap these elements
-                        flex_wrap: FlexWrap::NoWrap,
-                        // These buttons should be grouped tightly together within each row
-                        align_items: AlignItems::Center,
-                        // Center the UI vertically
+                        size,
+                        // Padding between buttons
+                        margin: Rect::all(Val::Px(5.0)),
+                        // Horizontally center child text
                         justify_content: JustifyContent::Center,
+                        // Vertically center child text
+                        align_items: AlignItems::Center,
                         ..Default::default()
                     },
-                    material: none_color.0.clone(),
+                    material: normal_material.clone(),
                     ..Default::default()
-                })
-                .insert(UiBox);
-        });
-}
+                },
+                normal_material: NormalMaterial(normal_material),
+                hovered_material: HoveredMaterial(hovered_material),
+                pressed_material: PressedMaterial(pressed_material),
+            }
+        }
+    }
 
-/// Creates the side panel buttons
-fn spawn_buttons(
-    mut commands: Commands,
-    ui_root_query: Query<Entity, With<UiBox>>,
-    new_button_materials: Res<ButtonMaterials<NewPuzzle>>,
-    reset_button_materials: Res<ButtonMaterials<ResetPuzzle>>,
-    solve_button_materials: Res<ButtonMaterials<SolvePuzzle>>,
-    number_materials: Res<ButtonMaterials<CellInput>>,
-    // TODO: split into three? Or maybe group into two resources total?
-    input_mode_button_materials: Res<ButtonMaterials<InputMode>>,
-    font: Res<FixedFont>,
-) {
-    let button_size = Size::new(Val::Px(BUTTON_LENGTH), Val::Px(BUTTON_LENGTH));
-    let num_button_size = Size::new(Val::Px(NUM_BUTTON_LENGTH), Val::Px(NUM_BUTTON_LENGTH));
+    /// Marker component for layout box of Sudoku game elements
+    pub struct SudokuBox;
+    /// Marker component for layout box of UI elements
+    pub struct UiBox;
 
-    // Layout nodes
-    const N_ROWS: usize = 5;
-    let mut layout_nodes = [Entity::new(0); N_ROWS];
-    for i in 0..N_ROWS {
-        layout_nodes[i] = commands
+    /// Spawns layout-only nodes for storing the game's user interface
+    pub fn spawn_layout_boxes(mut commands: Commands, none_color: Res<NoneColor>) {
+        // Global root node
+        commands
             .spawn_bundle(NodeBundle {
                 style: Style {
-                    justify_content: JustifyContent::Center,
-                    align_items: AlignItems::Center,
-                    align_content: AlignContent::Center,
+                    size: Size::new(Val::Percent(100.0), Val::Percent(100.0)),
                     ..Default::default()
                 },
+                material: none_color.0.clone(),
                 ..Default::default()
             })
-            .id();
-    }
-
-    // Number input buttons
-    let mut number_buttons = [Entity::new(0); 9];
-    for i in 0..9 {
-        let num = i + 1;
-
-        const TEXT_ALIGNMENT: TextAlignment = TextAlignment {
-            vertical: VerticalAlign::Center,
-            horizontal: HorizontalAlign::Center,
-        };
-
-        let text_style = TextStyle {
-            font: font.0.clone(),
-            font_size: 0.8 * NUM_BUTTON_LENGTH,
-            color: Color::BLACK,
-        };
-
-        number_buttons[i] = commands
-            .spawn_bundle(BoardButtonBundle::<CellInput>::new_with_data(
-                num_button_size,
-                &*number_materials,
-                CellInput { num: num as u8 },
-            ))
             .with_children(|parent| {
-                parent.spawn_bundle(TextBundle {
-                    text: Text::with_section(num.to_string(), text_style.clone(), TEXT_ALIGNMENT),
+                // Sudoku on left
+                parent
+                    .spawn_bundle(NodeBundle {
+                        style: Style {
+                            size: Size::new(Val::Percent(100.0 - UI_FRACTION), Val::Percent(100.0)),
+                            ..Default::default()
+                        },
+                        material: none_color.0.clone(),
+                        ..Default::default()
+                    })
+                    .insert(SudokuBox);
+
+                // Interface on right
+                parent
+                    .spawn_bundle(NodeBundle {
+                        style: Style {
+                            size: Size::new(Val::Percent(UI_FRACTION), Val::Percent(100.0)),
+                            // UI elements are arranged in stacked rows, growing from the bottom
+                            flex_direction: FlexDirection::ColumnReverse,
+                            // Don't wrap these elements
+                            flex_wrap: FlexWrap::NoWrap,
+                            // These buttons should be grouped tightly together within each row
+                            align_items: AlignItems::Center,
+                            // Center the UI vertically
+                            justify_content: JustifyContent::Center,
+                            ..Default::default()
+                        },
+                        material: none_color.0.clone(),
+                        ..Default::default()
+                    })
+                    .insert(UiBox);
+            });
+    }
+
+    /// Creates the side panel buttons
+    pub fn spawn_buttons(
+        mut commands: Commands,
+        ui_root_query: Query<Entity, With<UiBox>>,
+        new_button_materials: Res<ButtonMaterials<NewPuzzle>>,
+        reset_button_materials: Res<ButtonMaterials<ResetPuzzle>>,
+        solve_button_materials: Res<ButtonMaterials<SolvePuzzle>>,
+        number_materials: Res<ButtonMaterials<CellInput>>,
+        // TODO: split into three? Or maybe group into two resources total?
+        input_mode_button_materials: Res<ButtonMaterials<InputMode>>,
+        font: Res<FixedFont>,
+    ) {
+        let button_size = Size::new(Val::Px(BUTTON_LENGTH), Val::Px(BUTTON_LENGTH));
+        let num_button_size = Size::new(Val::Px(NUM_BUTTON_LENGTH), Val::Px(NUM_BUTTON_LENGTH));
+
+        // Layout nodes
+        const N_ROWS: usize = 5;
+        let mut layout_nodes = [Entity::new(0); N_ROWS];
+        for i in 0..N_ROWS {
+            layout_nodes[i] = commands
+                .spawn_bundle(NodeBundle {
+                    style: Style {
+                        justify_content: JustifyContent::Center,
+                        align_items: AlignItems::Center,
+                        align_content: AlignContent::Center,
+                        ..Default::default()
+                    },
                     ..Default::default()
-                });
-            })
+                })
+                .id();
+        }
+
+        // Number input buttons
+        let mut number_buttons = [Entity::new(0); 9];
+        for i in 0..9 {
+            let num = i + 1;
+
+            const TEXT_ALIGNMENT: TextAlignment = TextAlignment {
+                vertical: VerticalAlign::Center,
+                horizontal: HorizontalAlign::Center,
+            };
+
+            let text_style = TextStyle {
+                font: font.0.clone(),
+                font_size: 0.8 * NUM_BUTTON_LENGTH,
+                color: Color::BLACK,
+            };
+
+            number_buttons[i] = commands
+                .spawn_bundle(BoardButtonBundle::<CellInput>::new_with_data(
+                    num_button_size,
+                    &*number_materials,
+                    CellInput { num: num as u8 },
+                ))
+                .with_children(|parent| {
+                    parent.spawn_bundle(TextBundle {
+                        text: Text::with_section(
+                            num.to_string(),
+                            text_style.clone(),
+                            TEXT_ALIGNMENT,
+                        ),
+                        ..Default::default()
+                    });
+                })
+                .id();
+        }
+
+        // Input mode buttons
+        let fill_button = commands
+            .spawn_bundle(BoardButtonBundle::<InputMode>::new_with_data(
+                button_size,
+                &*input_mode_button_materials,
+                InputMode::Fill,
+            ))
             .id();
-    }
 
-    // Input mode buttons
-    let fill_button = commands
-        .spawn_bundle(BoardButtonBundle::<InputMode>::new_with_data(
-            button_size,
-            &*input_mode_button_materials,
-            InputMode::Fill,
-        ))
-        .id();
+        let center_mark_button = commands
+            .spawn_bundle(BoardButtonBundle::<InputMode>::new_with_data(
+                button_size,
+                &*input_mode_button_materials,
+                InputMode::CenterMark,
+            ))
+            .id();
 
-    let center_mark_button = commands
-        .spawn_bundle(BoardButtonBundle::<InputMode>::new_with_data(
-            button_size,
-            &*input_mode_button_materials,
-            InputMode::CenterMark,
-        ))
-        .id();
+        let corner_mark_button = commands
+            .spawn_bundle(BoardButtonBundle::<InputMode>::new_with_data(
+                button_size,
+                &*input_mode_button_materials,
+                InputMode::CornerMark,
+            ))
+            .id();
 
-    let corner_mark_button = commands
-        .spawn_bundle(BoardButtonBundle::<InputMode>::new_with_data(
-            button_size,
-            &*input_mode_button_materials,
-            InputMode::CornerMark,
-        ))
-        .id();
+        // Game control buttons
+        let new_game_button = commands
+            .spawn_bundle(BoardButtonBundle::<NewPuzzle>::new(
+                button_size,
+                &*new_button_materials,
+            ))
+            .id();
 
-    // Game control buttons
-    let new_game_button = commands
-        .spawn_bundle(BoardButtonBundle::<NewPuzzle>::new(
-            button_size,
-            &*new_button_materials,
-        ))
-        .id();
+        let reset_game_button = commands
+            .spawn_bundle(BoardButtonBundle::<ResetPuzzle>::new(
+                button_size,
+                &*reset_button_materials,
+            ))
+            .id();
 
-    let reset_game_button = commands
-        .spawn_bundle(BoardButtonBundle::<ResetPuzzle>::new(
-            button_size,
-            &*reset_button_materials,
-        ))
-        .id();
+        let solve_game_button = commands
+            .spawn_bundle(BoardButtonBundle::<SolvePuzzle>::new(
+                button_size,
+                &*solve_button_materials,
+            ))
+            .id();
 
-    let solve_game_button = commands
-        .spawn_bundle(BoardButtonBundle::<SolvePuzzle>::new(
-            button_size,
-            &*solve_button_materials,
-        ))
-        .id();
+        // Building our hierarchy, from bottom to top
+        let ui_root_entity = ui_root_query.single().expect("No UI root entity found.");
+        commands.entity(ui_root_entity).push_children(&layout_nodes);
 
-    // Building our hierarchy, from bottom to top
-    let ui_root_entity = ui_root_query.single().expect("No UI root entity found.");
-    commands.entity(ui_root_entity).push_children(&layout_nodes);
+        // Number buttons
+        commands
+            .entity(layout_nodes[0])
+            .push_children(&number_buttons[0..3]);
 
-    // Number buttons
-    commands
-        .entity(layout_nodes[0])
-        .push_children(&number_buttons[0..3]);
+        commands
+            .entity(layout_nodes[1])
+            .push_children(&number_buttons[3..6]);
 
-    commands
-        .entity(layout_nodes[1])
-        .push_children(&number_buttons[3..6]);
+        commands
+            .entity(layout_nodes[2])
+            .push_children(&number_buttons[6..9]);
 
-    commands
-        .entity(layout_nodes[2])
-        .push_children(&number_buttons[6..9]);
+        // Row 1 buttons
+        commands.entity(layout_nodes[3]).push_children(&[
+            fill_button,
+            center_mark_button,
+            corner_mark_button,
+        ]);
 
-    // Row 1 buttons
-    commands.entity(layout_nodes[3]).push_children(&[
-        fill_button,
-        center_mark_button,
-        corner_mark_button,
-    ]);
-
-    // Row 2 buttons
-    commands.entity(layout_nodes[4]).push_children(&[
-        new_game_button,
-        reset_game_button,
-        solve_game_button,
-    ]);
-}
-
-/// Marker component for entities whose materials should not respond
-struct FixedMaterial;
-
-/// Changes the button materials when interacted with
-fn responsive_buttons(
-    mut button_query: Query<
-        (
-            &Interaction,
-            &mut Handle<ColorMaterial>,
-            &NormalMaterial,
-            &HoveredMaterial,
-            &PressedMaterial,
-        ),
-        (Without<FixedMaterial>, Changed<Interaction>),
-    >,
-) {
-    for (interaction, mut material, normal_material, hovered_material, pressed_material) in
-        button_query.iter_mut()
-    {
-        *material = match *interaction {
-            Interaction::None => normal_material.0.clone(),
-            Interaction::Hovered => hovered_material.0.clone(),
-            Interaction::Clicked => pressed_material.0.clone(),
-        }
+        // Row 2 buttons
+        commands.entity(layout_nodes[4]).push_children(&[
+            new_game_button,
+            reset_game_button,
+            solve_game_button,
+        ]);
     }
 }
 
-/// Sends the event type associated with the button when pressed
-/// using the data stored on the component of that type
-fn puzzle_button<Marker: Component + Clone>(
-    query: Query<(&Interaction, &Marker)>,
-    mut event_writer: EventWriter<Marker>,
-) {
-    for (interaction, marker) in query.iter() {
-        if *interaction == Interaction::Clicked {
-            event_writer.send(marker.clone());
-        }
-    }
-}
+mod actions {
+    use super::*;
 
-/// Changes the input mode of the puzzle when these buttons are pressed
-fn input_mode_buttons(
-    button_query: Query<(&Interaction, &InputMode), Changed<Interaction>>,
-    mut input_mode: ResMut<InputMode>,
-) {
-    for (interaction, button_input_mode) in button_query.iter() {
-        if *interaction == Interaction::Clicked {
-            *input_mode = *button_input_mode;
-        }
-    }
-}
+    /// Marker component for entities whose materials should not respond
+    pub struct FixedMaterial;
 
-/// Permanently displays selected input mode as pressed
-fn show_selected_input_mode(
-    mut button_query: Query<(
-        Entity,
-        &InputMode,
-        &mut Handle<ColorMaterial>,
-        &PressedMaterial,
-        &NormalMaterial,
-    )>,
-    input_mode: Res<InputMode>,
-    mut commands: Commands,
-) {
-    if input_mode.is_changed() {
-        for (entity, button_input_mode, mut material, pressed_material, normal_material) in
+    /// Changes the button materials when interacted with
+    pub fn responsive_buttons(
+        mut button_query: Query<
+            (
+                &Interaction,
+                &mut Handle<ColorMaterial>,
+                &NormalMaterial,
+                &HoveredMaterial,
+                &PressedMaterial,
+            ),
+            (Without<FixedMaterial>, Changed<Interaction>),
+        >,
+    ) {
+        for (interaction, mut material, normal_material, hovered_material, pressed_material) in
             button_query.iter_mut()
         {
-            if *button_input_mode == *input_mode {
-                *material = pressed_material.0.clone();
-                commands.entity(entity).insert(FixedMaterial);
-            } else {
-                *material = normal_material.0.clone();
-                commands.entity(entity).remove::<FixedMaterial>();
+            *material = match *interaction {
+                Interaction::None => normal_material.0.clone(),
+                Interaction::Hovered => hovered_material.0.clone(),
+                Interaction::Clicked => pressed_material.0.clone(),
+            }
+        }
+    }
+
+    /// Permanently displays selected input mode as pressed
+    pub fn show_selected_input_mode(
+        mut button_query: Query<(
+            Entity,
+            &InputMode,
+            &mut Handle<ColorMaterial>,
+            &PressedMaterial,
+            &NormalMaterial,
+        )>,
+        input_mode: Res<InputMode>,
+        mut commands: Commands,
+    ) {
+        if input_mode.is_changed() {
+            for (entity, button_input_mode, mut material, pressed_material, normal_material) in
+                button_query.iter_mut()
+            {
+                if *button_input_mode == *input_mode {
+                    *material = pressed_material.0.clone();
+                    commands.entity(entity).insert(FixedMaterial);
+                } else {
+                    *material = normal_material.0.clone();
+                    commands.entity(entity).remove::<FixedMaterial>();
+                }
             }
         }
     }

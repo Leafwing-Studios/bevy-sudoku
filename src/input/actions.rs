@@ -5,7 +5,7 @@ use crate::logic::board::{
 };
 use bevy::prelude::*;
 
-use super::{mouse::CellClick, CellInput, Selected};
+use super::{board::CellClick, CellInput, Selected};
 
 /// Set the value of the selected cells from cell input events
 pub fn set_cell_value(

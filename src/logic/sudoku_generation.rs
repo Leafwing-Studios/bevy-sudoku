@@ -1,9 +1,6 @@
 /// Sudoku generation logic
-use crate::graphics::buttons::{NewPuzzle, SolvePuzzle};
-use crate::{
-    graphics::buttons::ResetPuzzle,
-    logic::board::{Cell, Coordinates, Fixed, Value},
-};
+use crate::input::buttons::{NewPuzzle, ResetPuzzle, SolvePuzzle};
+use crate::logic::board::{Cell, Coordinates, Fixed, Value};
 use bevy::prelude::*;
 use bevy::utils::HashMap;
 use std::ops::DerefMut;
