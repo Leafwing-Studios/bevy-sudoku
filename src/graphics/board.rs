@@ -111,7 +111,7 @@ pub mod assets {
 
 // FIXME: redo logic in UI
 mod setup {
-    use crate::graphics::layout::SudokuBox;
+    use crate::graphics::{assets::NoneColor, layout::SudokuBox};
 
     use super::*;
 
@@ -161,9 +161,13 @@ mod setup {
     /// Marker component for our Board entity that all the game board entities are a child of
     struct Board;
 
+    /// Spawns our board
+    // FIXME: add cells and cell numbers
+    // FIXME: cell lines overextend when compressed
     pub fn spawn_board(
         mut commands: Commands,
         mut materials: ResMut<Assets<ColorMaterial>>,
+        none_color: Res<NoneColor>,
         root_node_query: Query<Entity, With<SudokuBox>>,
     ) {
         let grid_material = materials.add(GRID_COLOR.into());
@@ -193,11 +197,16 @@ mod setup {
             .spawn()
             .insert_bundle(NodeBundle {
                 style: Style {
-                    size: Size::new(Val::Px(GRID_SIZE), Val::Px(GRID_SIZE)),
+                    size: grid_size,
+                    // Lays out the grid lines on top of each other
                     flex_direction: FlexDirection::Column,
+                    // Do not lay this out relative to siblings
+                    position_type: PositionType::Absolute,
+                    // Evenly space lines
                     justify_content: JustifyContent::SpaceBetween,
                     ..Default::default()
                 },
+                material: none_color.0.clone(),
                 ..Default::default()
             })
             .id();
@@ -218,11 +227,16 @@ mod setup {
             .spawn()
             .insert_bundle(NodeBundle {
                 style: Style {
-                    size: Size::new(Val::Px(GRID_SIZE), Val::Px(GRID_SIZE)),
+                    size: grid_size,
+                    // Lays out the grid lines beside each other
                     flex_direction: FlexDirection::Row,
+                    // Do not lay this out relative to siblings
+                    position_type: PositionType::Absolute,
+                    // Evenly space lines
                     justify_content: JustifyContent::SpaceBetween,
                     ..Default::default()
                 },
+                material: none_color.0.clone(),
                 ..Default::default()
             })
             .id();
