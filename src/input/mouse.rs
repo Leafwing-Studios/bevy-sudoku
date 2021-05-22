@@ -1,3 +1,6 @@
+/// Handle player input from the mouse, converting it into actions
+///
+/// Input handling from the buttons are found in /graphics/button.rs
 use self::cell_index::CellIndex;
 use crate::{graphics::MainCamera, logic::board::Cell};
 use bevy::prelude::*;

@@ -1,3 +1,4 @@
+/// A simple but polished Sudoku game, written in Bevy
 use bevy::prelude::*;
 
 mod graphics;

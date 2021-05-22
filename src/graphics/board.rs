@@ -1,3 +1,4 @@
+/// Build and display the Sudoku board
 use crate::{
     input::Selected,
     logic::board::{Cell, Coordinates, Fixed, Value},

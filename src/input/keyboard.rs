@@ -1,3 +1,4 @@
+/// Handle player input from the keyboard, converting it into actions
 use super::{actions::InputMode, CellInput, Selected};
 use crate::logic::board::{Cell, Fixed, Value};
 use bevy::prelude::*;

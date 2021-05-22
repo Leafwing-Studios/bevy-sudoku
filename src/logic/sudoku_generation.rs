@@ -1,5 +1,3 @@
-use std::ops::DerefMut;
-
 /// Sudoku generation logic
 use crate::graphics::buttons::{NewPuzzle, SolvePuzzle};
 use crate::{
@@ -8,6 +6,7 @@ use crate::{
 };
 use bevy::prelude::*;
 use bevy::utils::HashMap;
+use std::ops::DerefMut;
 use sudoku::Sudoku;
 
 pub struct GenerationPlugin;

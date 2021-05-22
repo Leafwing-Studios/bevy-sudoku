@@ -1,3 +1,4 @@
+/// Build and display the UI buttons
 use super::board::assets::FixedFont;
 use crate::{
     input::{actions::InputMode, CellInput},

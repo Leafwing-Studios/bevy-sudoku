@@ -1,3 +1,4 @@
+/// Display the Sudoku game
 pub mod board;
 pub mod buttons;
 
