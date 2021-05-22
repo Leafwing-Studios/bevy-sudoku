@@ -8,9 +8,9 @@ pub mod board;
 pub mod buttons;
 mod keyboard;
 
-pub struct InteractionPlugin;
+pub struct InputPlugin;
 
-impl Plugin for InteractionPlugin {
+impl Plugin for InputPlugin {
     fn build(&self, app: &mut AppBuilder) {
         app
             // INPUT EVENTS

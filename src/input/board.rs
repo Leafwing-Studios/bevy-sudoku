@@ -2,8 +2,8 @@
 ///
 /// Input handling from the buttons are found in /graphics/button.rs
 use self::cell_index::CellIndex;
-use crate::{graphics::MainCamera, logic::board::Cell};
-use bevy::prelude::*;
+use crate::logic::board::Cell;
+use bevy::{prelude::*, render::camera::Camera};
 
 /// Event to dispatch cell clicks
 pub struct CellClick {
@@ -15,9 +15,10 @@ pub struct CellClick {
     pub drag: bool,
 }
 
+// FIXME: Adapt to UI board
 /// Turns raw clicks into `CellClick` events
 pub fn cell_click(
-    camera_query: Query<&Transform, With<MainCamera>>,
+    camera_query: Query<&Transform, With<Camera>>,
     mouse_button_input: Res<Input<MouseButton>>,
     keyboard_input: Res<Input<KeyCode>>,
     windows: Res<Windows>,
@@ -67,6 +68,7 @@ pub fn cell_click(
     }
 }
 
+// FIXME: remove
 pub mod cell_index {
     use super::*;
     use bevy::utils::HashMap;

@@ -7,12 +7,10 @@ mod logic;
 
 fn main() {
     App::build()
-        .insert_resource(ClearColor(graphics::BACKGROUND_COLOR))
+        .insert_resource(ClearColor(graphics::config::BACKGROUND_COLOR))
         .add_plugins(DefaultPlugins)
-        .add_startup_system(graphics::spawn_cameras.system())
-        .add_plugin(graphics::board::BoardPlugin)
-        .add_plugin(graphics::buttons::BoardButtonsPlugin)
-        .add_plugin(input::InteractionPlugin)
+        .add_plugin(graphics::GraphicsPlugin)
+        .add_plugin(input::InputPlugin)
         .add_plugin(logic::board::LogicPlugin)
         .add_plugin(logic::sudoku_generation::GenerationPlugin)
         .add_system(bevy::input::system::exit_on_esc_system.system())

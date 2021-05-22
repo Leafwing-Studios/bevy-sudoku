@@ -20,11 +20,7 @@ impl Plugin for BoardPlugin {
             .init_resource::<BackgroundColor>()
             .init_resource::<SelectionColor>()
             // SETUP
-            // Must occur in an earlier stage to ensure that the cells are initialized
-            // as commands are not processed until the end of the stage
-            .add_startup_system_to_stage(StartupStage::PreStartup, setup::spawn_cells.system())
-            .add_startup_system(setup::spawn_grid.system())
-            .add_startup_system(setup::spawn_cell_numbers.system())
+            .add_startup_system(setup::spawn_board.system())
             // ACTION HANDLING
             .add_system_set(
                 SystemSet::new()
@@ -56,13 +52,6 @@ mod config {
     pub const MAJOR_LINE_THICKNESS: f32 = 4.0;
 
     // Positions
-    // Defines the center lines of the grid in absolute coordinates
-    // (0, 0) is in the center of the screen in Bevy
-    pub const GRID_CENTER_X: f32 = -300.0;
-    pub const GRID_LEFT_EDGE: f32 = GRID_CENTER_X - 0.5 * GRID_SIZE;
-    pub const GRID_CENTER_Y: f32 = 0.0;
-    pub const GRID_BOT_EDGE: f32 = GRID_CENTER_Y - 0.5 * GRID_SIZE;
-
     pub const NUM_OFFSET_X: f32 = 0.0 * CELL_SIZE;
     pub const NUM_OFFSET_Y: f32 = 0.03 * CELL_SIZE;
 }
@@ -120,27 +109,20 @@ pub mod assets {
     }
 }
 
+// FIXME: redo logic in UI
 mod setup {
+    use crate::graphics::layout::SudokuBox;
+
     use super::*;
 
-    pub fn spawn_grid(mut commands: Commands, mut materials: ResMut<Assets<ColorMaterial>>) {
-        let grid_handle = materials.add(GRID_COLOR.into());
-
-        for row in 0..=9 {
-            commands.spawn_bundle(new_gridline(
-                Orientation::Horizontal,
-                row,
-                grid_handle.clone(),
-            ));
-        }
-
-        for column in 0..=9 {
-            commands.spawn_bundle(new_gridline(
-                Orientation::Vertical,
-                column,
-                grid_handle.clone(),
-            ));
-        }
+    /// Marker component for our GridLine entities
+    struct GridLine;
+    /// Simple rectangular lines that form the Sudoku grid
+    #[derive(Bundle)]
+    struct GridLineBundle {
+        gridline: GridLine,
+        #[bundle]
+        node_bundle: NodeBundle,
     }
 
     enum Orientation {
@@ -148,40 +130,128 @@ mod setup {
         Vertical,
     }
 
-    fn new_gridline(
-        orientation: Orientation,
-        i: u8,
-        grid_handle: Handle<ColorMaterial>,
-    ) -> SpriteBundle {
-        // The grid lines that define the boxes need to be thicker
-        let thickness = if (i % 3) == 0 {
-            MAJOR_LINE_THICKNESS
-        } else {
-            MINOR_LINE_THICKNESS
-        };
+    impl GridLineBundle {
+        fn new(orientation: Orientation, i: u8, material: Handle<ColorMaterial>) -> Self {
+            // The grid lines that define the boxes need to be thicker
+            let thickness = if (i % 3) == 0 {
+                MAJOR_LINE_THICKNESS
+            } else {
+                MINOR_LINE_THICKNESS
+            };
 
-        let length = GRID_SIZE + thickness;
+            let size = match orientation {
+                Orientation::Horizontal => Size::new(Val::Px(GRID_SIZE), Val::Px(thickness)),
+                Orientation::Vertical => Size::new(Val::Px(thickness), Val::Px(GRID_SIZE)),
+            };
 
-        let size = match orientation {
-            Orientation::Horizontal => Vec2::new(length, thickness),
-            Orientation::Vertical => Vec2::new(thickness, length),
-        };
-
-        // Each objects' position is defined by its center
-        let offset = i as f32 * CELL_SIZE;
-
-        let (x, y) = match orientation {
-            Orientation::Horizontal => (GRID_LEFT_EDGE + 0.5 * GRID_SIZE, GRID_BOT_EDGE + offset),
-            Orientation::Vertical => (GRID_LEFT_EDGE + offset, GRID_BOT_EDGE + 0.5 * GRID_SIZE),
-        };
-
-        SpriteBundle {
-            sprite: Sprite::new(size),
-            // We want these grid lines to cover any cell that it might overlap with
-            transform: Transform::from_xyz(x, y, 1.0),
-            material: grid_handle,
-            ..Default::default()
+            GridLineBundle {
+                gridline: GridLine,
+                node_bundle: NodeBundle {
+                    style: Style {
+                        size,
+                        ..Default::default()
+                    },
+                    material,
+                    ..Default::default()
+                },
+            }
         }
+    }
+
+    /// Marker component for our Board entity that all the game board entities are a child of
+    struct Board;
+
+    pub fn spawn_board(
+        mut commands: Commands,
+        mut materials: ResMut<Assets<ColorMaterial>>,
+        root_node_query: Query<Entity, With<SudokuBox>>,
+    ) {
+        let grid_material = materials.add(GRID_COLOR.into());
+        let grid_size = Size::new(Val::Px(GRID_SIZE), Val::Px(GRID_SIZE));
+
+        // Node that owns the left half of the screen
+        let root_node = root_node_query.single().expect("Root node not found.");
+        // Parent of all of our game board entities
+        let grid_node = commands
+            .spawn()
+            .insert_bundle(NodeBundle {
+                style: Style {
+                    size: grid_size,
+                    min_size: grid_size,
+                    ..Default::default()
+                },
+                ..Default::default()
+            })
+            .insert(Board)
+            .id();
+
+        // The game board is a child of our SudokuBox node
+        commands.entity(root_node).push_children(&[grid_node]);
+
+        // Horizontal lines
+        let horizontal_grid_node = commands
+            .spawn()
+            .insert_bundle(NodeBundle {
+                style: Style {
+                    size: Size::new(Val::Px(GRID_SIZE), Val::Px(GRID_SIZE)),
+                    flex_direction: FlexDirection::Column,
+                    justify_content: JustifyContent::SpaceBetween,
+                    ..Default::default()
+                },
+                ..Default::default()
+            })
+            .id();
+
+        let mut horizontal_grid_lines = [Entity::new(0); 10];
+        for row in 0..=9 {
+            horizontal_grid_lines[row] = commands
+                .spawn_bundle(GridLineBundle::new(
+                    Orientation::Horizontal,
+                    row as u8,
+                    grid_material.clone(),
+                ))
+                .id();
+        }
+
+        // Vertical lines
+        let vertical_grid_node = commands
+            .spawn()
+            .insert_bundle(NodeBundle {
+                style: Style {
+                    size: Size::new(Val::Px(GRID_SIZE), Val::Px(GRID_SIZE)),
+                    flex_direction: FlexDirection::Row,
+                    justify_content: JustifyContent::SpaceBetween,
+                    ..Default::default()
+                },
+                ..Default::default()
+            })
+            .id();
+
+        let mut vertical_grid_lines = [Entity::new(0); 10];
+        for column in 0..=9 {
+            vertical_grid_lines[column] = commands
+                .spawn_bundle(GridLineBundle::new(
+                    Orientation::Vertical,
+                    column as u8,
+                    grid_material.clone(),
+                ))
+                .id();
+        }
+
+        // Building our hierarchy
+        commands
+            .entity(grid_node)
+            // We need two seperate nodes for these lines due to differing layout strategies
+            .push_children(&[horizontal_grid_node])
+            .push_children(&[vertical_grid_node]);
+
+        commands
+            .entity(horizontal_grid_node)
+            .push_children(&horizontal_grid_lines);
+
+        commands
+            .entity(vertical_grid_node)
+            .push_children(&vertical_grid_lines);
     }
 
     pub fn spawn_cells(mut commands: Commands) {
@@ -192,6 +262,7 @@ mod setup {
         }
     }
 
+    // FIXME: use a button bundle
     #[derive(Bundle)]
     struct CellBundle {
         cell: Cell,
@@ -204,8 +275,8 @@ mod setup {
 
     impl CellBundle {
         fn new(row: u8, column: u8) -> Self {
-            let x = GRID_LEFT_EDGE + CELL_SIZE * row as f32 - 0.5 * CELL_SIZE;
-            let y = GRID_BOT_EDGE + CELL_SIZE * column as f32 - 0.5 * CELL_SIZE;
+            let x = CELL_SIZE * row as f32 - 0.5 * CELL_SIZE;
+            let y = CELL_SIZE * column as f32 - 0.5 * CELL_SIZE;
 
             CellBundle {
                 cell: Cell,
@@ -290,6 +361,7 @@ mod actions {
         mut num_query: Query<&mut Text>,
     ) {
         use Value::*;
+        // FIXME: remove use of relations
         for (cell_value, displayed_by) in cell_query.iter() {
             for (num_entity, _) in displayed_by {
                 let mut text = num_query
@@ -333,6 +405,7 @@ mod actions {
         fixed_font_res: Res<FixedFont>,
         fillable_font_res: Res<FillableFont>,
     ) {
+        // FIXME: remove use of relations
         for (is_fixed, displayed_by) in cell_query.iter() {
             for (text_entity, _) in displayed_by {
                 let mut text = text_query

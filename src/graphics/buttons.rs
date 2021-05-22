@@ -11,10 +11,9 @@ use std::marker::PhantomData;
 use self::assets::*;
 use self::config::*;
 
-pub struct BoardButtonsPlugin;
+pub struct ButtonsPlugin;
 
-// QUALITY: use system sets for clarity
-impl Plugin for BoardButtonsPlugin {
+impl Plugin for ButtonsPlugin {
     fn build(&self, app: &mut AppBuilder) {
         app
             // ASSETS
@@ -23,13 +22,8 @@ impl Plugin for BoardButtonsPlugin {
             .init_resource::<ButtonMaterials<SolvePuzzle>>()
             .init_resource::<ButtonMaterials<InputMode>>()
             .init_resource::<ButtonMaterials<CellInput>>()
-            .init_resource::<NoneColor>()
             // SETUP
             // Must be complete before we can spawn buttons
-            .add_startup_system_to_stage(
-                StartupStage::PreStartup,
-                setup::spawn_layout_boxes.system(),
-            )
             .add_startup_system(setup::spawn_buttons.system())
             // ACTIONS
             .add_system(
@@ -47,8 +41,6 @@ impl Plugin for BoardButtonsPlugin {
 }
 
 mod config {
-    // The horizontal percentage of the screen that the UI panel takes up
-    pub const UI_FRACTION: f32 = 50.0;
     /// The side length of the UI buttons
     pub const BUTTON_LENGTH: f32 = 64.0;
     /// The side length of the numpad-like input buttons
@@ -58,18 +50,6 @@ mod config {
 // QUALITY: reduce asset loading code duplication dramatically
 mod assets {
     use super::*;
-    /// The null, transparent color
-    pub struct NoneColor(pub Handle<ColorMaterial>);
-
-    impl FromWorld for NoneColor {
-        fn from_world(world: &mut World) -> Self {
-            let mut materials = world
-                .get_resource_mut::<Assets<ColorMaterial>>()
-                .expect("ResMut<Assets<ColorMaterial>> not found.");
-            NoneColor(materials.add(Color::NONE.into()))
-        }
-    }
-
     /// Resource that contains the raw materials for each button type
     /// corresponding to the Marker type marker component
     pub struct ButtonMaterials<Marker: Component> {
@@ -158,6 +138,8 @@ mod assets {
 }
 
 mod setup {
+    use crate::graphics::layout::UiBox;
+
     use super::*;
     #[derive(Bundle)]
     struct BoardButtonBundle<Marker: Component> {
@@ -207,58 +189,6 @@ mod setup {
                 pressed_material: PressedMaterial(pressed_material),
             }
         }
-    }
-
-    /// Marker component for layout box of Sudoku game elements
-    pub struct SudokuBox;
-    /// Marker component for layout box of UI elements
-    pub struct UiBox;
-
-    /// Spawns layout-only nodes for storing the game's user interface
-    pub fn spawn_layout_boxes(mut commands: Commands, none_color: Res<NoneColor>) {
-        // Global root node
-        commands
-            .spawn_bundle(NodeBundle {
-                style: Style {
-                    size: Size::new(Val::Percent(100.0), Val::Percent(100.0)),
-                    ..Default::default()
-                },
-                material: none_color.0.clone(),
-                ..Default::default()
-            })
-            .with_children(|parent| {
-                // Sudoku on left
-                parent
-                    .spawn_bundle(NodeBundle {
-                        style: Style {
-                            size: Size::new(Val::Percent(100.0 - UI_FRACTION), Val::Percent(100.0)),
-                            ..Default::default()
-                        },
-                        material: none_color.0.clone(),
-                        ..Default::default()
-                    })
-                    .insert(SudokuBox);
-
-                // Interface on right
-                parent
-                    .spawn_bundle(NodeBundle {
-                        style: Style {
-                            size: Size::new(Val::Percent(UI_FRACTION), Val::Percent(100.0)),
-                            // UI elements are arranged in stacked rows, growing from the bottom
-                            flex_direction: FlexDirection::ColumnReverse,
-                            // Don't wrap these elements
-                            flex_wrap: FlexWrap::NoWrap,
-                            // These buttons should be grouped tightly together within each row
-                            align_items: AlignItems::Center,
-                            // Center the UI vertically
-                            justify_content: JustifyContent::Center,
-                            ..Default::default()
-                        },
-                        material: none_color.0.clone(),
-                        ..Default::default()
-                    })
-                    .insert(UiBox);
-            });
     }
 
     /// Creates the side panel buttons
