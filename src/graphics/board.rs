@@ -169,6 +169,7 @@ mod setup {
         mut materials: ResMut<Assets<ColorMaterial>>,
         none_color: Res<NoneColor>,
         root_node_query: Query<Entity, With<SudokuBox>>,
+        fixed_font: Res<FixedFont>,
     ) {
         let grid_material = materials.add(GRID_COLOR.into());
         let grid_size = Size::new(Val::Px(GRID_SIZE), Val::Px(GRID_SIZE));
@@ -252,12 +253,71 @@ mod setup {
                 .id();
         }
 
+        // Cells
+        let cells_node = commands
+            .spawn()
+            .insert_bundle(NodeBundle {
+                style: Style {
+                    size: grid_size,
+                    // Wrap cells in a 9 x 9 pattern
+                    // as the cell size * 9 == grid size
+                    flex_wrap: FlexWrap::Wrap,
+                    // Do not lay this out relative to siblings
+                    position_type: PositionType::Absolute,
+                    // Evenly space cells along the main axis, with no gaps at the end
+                    justify_content: JustifyContent::SpaceBetween,
+                    // Evenly space cells along the cross axis, with no gaps at the end
+                    align_content: AlignContent::SpaceBetween,
+                    ..Default::default()
+                },
+                material: none_color.0.clone(),
+                ..Default::default()
+            })
+            .id();
+
+        // Cell text
+        let text_style = TextStyle {
+            font: fixed_font.0.clone(),
+            font_size: 0.8 * CELL_SIZE,
+            color: NUMBER_COLOR,
+        };
+
+        const TEXT_ALIGNMENT: TextAlignment = TextAlignment {
+            vertical: VerticalAlign::Center,
+            horizontal: HorizontalAlign::Center,
+        };
+
+        // Spawning cells and cell texts
+        let mut cells = [Entity::new(0); 9 * 9];
+        let mut i = 0;
+        for row in 1..=9 {
+            for column in 1..=9 {
+                cells[i] = commands
+                    .spawn_bundle(CellBundle::new(row, column))
+                    .with_children(|parent| {
+                        parent
+                            .spawn_bundle(TextBundle {
+                                // This value begins empty, but then is later set in update_cell_numbers system
+                                // to match the cell's `value` field
+                                text: Text::with_section("", text_style.clone(), TEXT_ALIGNMENT),
+                                // Tweaking for aesthetic perfection
+                                transform: Transform::from_xyz(NUM_OFFSET_X, NUM_OFFSET_Y, 0.0),
+                                ..Default::default()
+                            })
+                            .insert(CellNumber);
+                    })
+                    .id();
+                i += 1;
+            }
+        }
+
         // Building our hierarchy
         commands
             .entity(grid_node)
-            // We need two seperate nodes for these lines due to differing layout strategies
+            // We need several seperate nodes due to differing layout strategies
             .push_children(&[horizontal_grid_node])
-            .push_children(&[vertical_grid_node]);
+            .push_children(&[vertical_grid_node])
+            .push_children(&[cells_node]);
 
         commands
             .entity(horizontal_grid_node)
@@ -266,14 +326,8 @@ mod setup {
         commands
             .entity(vertical_grid_node)
             .push_children(&vertical_grid_lines);
-    }
 
-    pub fn spawn_cells(mut commands: Commands) {
-        for row in 1..=9 {
-            for column in 1..=9 {
-                commands.spawn_bundle(CellBundle::new(row, column));
-            }
-        }
+        commands.entity(cells_node).push_children(&cells);
     }
 
     // FIXME: use a button bundle
@@ -284,14 +338,11 @@ mod setup {
         value: Value,
         fixed: Fixed,
         #[bundle]
-        cell_fill: SpriteBundle,
+        button: ButtonBundle,
     }
 
     impl CellBundle {
         fn new(row: u8, column: u8) -> Self {
-            let x = CELL_SIZE * row as f32 - 0.5 * CELL_SIZE;
-            let y = CELL_SIZE * column as f32 - 0.5 * CELL_SIZE;
-
             CellBundle {
                 cell: Cell,
                 coordinates: Coordinates {
@@ -302,11 +353,8 @@ mod setup {
                 // No digits are filled in to begin with
                 value: Value::Empty,
                 fixed: Fixed(false),
-                cell_fill: SpriteBundle {
-                    // The material for this sprite begins with the same material as our background
-                    sprite: Sprite::new(Vec2::new(CELL_SIZE, CELL_SIZE)),
-                    // We want this cell to be covered by any grid lines that it might overlap with
-                    transform: Transform::from_xyz(x, y, 0.0),
+                // FIXME: configure properly
+                button: ButtonBundle {
                     ..Default::default()
                 },
             }
@@ -319,50 +367,6 @@ mod setup {
     // Marker relation to designate that the Value on the source entity (the Cell entity)
     // is displayed by the target entity (the Text2d entity in the same location)
     pub struct DisplayedBy;
-
-    /// Adds a text number associated with each cell to display its value
-    pub fn spawn_cell_numbers(
-        query: Query<(Entity, &Transform), With<Cell>>,
-        mut commands: Commands,
-        font_res: Res<FixedFont>,
-    ) {
-        const TEXT_ALIGNMENT: TextAlignment = TextAlignment {
-            vertical: VerticalAlign::Center,
-            horizontal: HorizontalAlign::Center,
-        };
-
-        for (cell_entity, cell_transform) in query.iter() {
-            let mut number_transform = cell_transform.clone();
-
-            // Tweaks for aesthetic perfection
-            number_transform.translation.x += NUM_OFFSET_X;
-            number_transform.translation.y += NUM_OFFSET_Y;
-
-            // These numbers must be displayed on top of the cells they are in
-            number_transform.translation.z += 1.0;
-
-            let text_style = TextStyle {
-                font: font_res.0.clone(),
-                font_size: 0.8 * CELL_SIZE,
-                color: NUMBER_COLOR,
-            };
-
-            let text_entity = commands
-                .spawn_bundle(Text2dBundle {
-                    // This value begins empty, but then is later set in update_cell_numbers system
-                    // to match the cell's `value` field
-                    text: Text::with_section("", text_style.clone(), TEXT_ALIGNMENT),
-                    transform: number_transform,
-                    ..Default::default()
-                })
-                .insert(CellNumber)
-                .id();
-
-            commands
-                .entity(cell_entity)
-                .insert_relation(DisplayedBy, text_entity);
-        }
-    }
 }
 
 mod actions {

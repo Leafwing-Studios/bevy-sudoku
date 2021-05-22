@@ -59,11 +59,7 @@ mod layout {
     pub struct UiBox;
 
     /// Spawns layout-only nodes for storing the game's user interface
-    pub fn spawn_layout_boxes(
-        mut commands: Commands,
-        none_color: Res<NoneColor>,
-        mut materials: ResMut<Assets<ColorMaterial>>,
-    ) {
+    pub fn spawn_layout_boxes(mut commands: Commands, none_color: Res<NoneColor>) {
         // Global root node
         commands
             .spawn_bundle(NodeBundle {
