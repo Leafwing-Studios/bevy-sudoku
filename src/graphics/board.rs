@@ -1,6 +1,7 @@
 use crate::{
     input::Selected,
     logic::board::{Cell, Coordinates, Fixed, Value},
+    CommonLabels,
 };
 use bevy::prelude::*;
 
@@ -17,16 +18,20 @@ impl Plugin for BoardPlugin {
             .init_resource::<FillableFont>()
             .init_resource::<BackgroundColor>()
             .init_resource::<SelectionColor>()
-            .add_startup_system(setup::spawn_grid.system())
+            // SETUP
             // Must occur in an earlier stage to ensure that the cells are initialized
             // as commands are not processed until the end of the stage
             .add_startup_system_to_stage(StartupStage::PreStartup, setup::spawn_cells.system())
+            .add_startup_system(setup::spawn_grid.system())
             .add_startup_system(setup::spawn_cell_numbers.system())
-            // ACTION PROCESSING
-            // Should run after actions to avoid delays
-            .add_system(actions::color_selected.system().after("actions"))
-            .add_system(actions::update_cell_numbers.system().after("actions"))
-            .add_system(actions::style_numbers.system().after("actions"));
+            // ACTION HANDLING
+            .add_system_set(
+                SystemSet::new()
+                    .after(CommonLabels::Action)
+                    .with_system(actions::color_selected.system())
+                    .with_system(actions::update_cell_numbers.system())
+                    .with_system(actions::style_numbers.system()),
+            );
     }
 }
 

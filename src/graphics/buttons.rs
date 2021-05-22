@@ -1,5 +1,8 @@
 use super::board::assets::FixedFont;
-use crate::input::{input_mode::InputMode, CellInput};
+use crate::{
+    input::{input_mode::InputMode, CellInput},
+    CommonLabels,
+};
 use bevy::{ecs::component::Component, prelude::*};
 use std::marker::PhantomData;
 
@@ -19,27 +22,31 @@ impl Plugin for BoardButtonsPlugin {
             .init_resource::<ButtonMaterials<InputMode>>()
             .init_resource::<ButtonMaterials<CellInput>>()
             .init_resource::<NoneColor>()
+            // SETUP
             // Must be complete before we can spawn buttons
             .add_startup_system_to_stage(StartupStage::PreStartup, spawn_layout_boxes.system())
             .add_startup_system(spawn_buttons.system())
-            // Number input buttons
-            .add_system(puzzle_button::<CellInput>.system().label("input"))
-            // Puzzle control buttons
-            .add_system(responsive_buttons.system().label("responsive_buttons"))
+            // INPUT EVENTS
             .add_event::<NewPuzzle>()
-            .add_system(puzzle_button::<NewPuzzle>.system())
             .add_event::<ResetPuzzle>()
-            .add_system(puzzle_button::<ResetPuzzle>.system())
             .add_event::<SolvePuzzle>()
-            .add_system(puzzle_button::<SolvePuzzle>.system())
-            // Input mode buttons
-            .add_system(input_mode_buttons.system().label("input"))
+            // BUTTON LOGIC
+            .add_system_set(
+                SystemSet::new()
+                    .label(CommonLabels::Input)
+                    .with_system(puzzle_button::<NewPuzzle>.system())
+                    .with_system(puzzle_button::<ResetPuzzle>.system())
+                    .with_system(puzzle_button::<SolvePuzzle>.system())
+                    .with_system(puzzle_button::<CellInput>.system())
+                    .with_system(input_mode_buttons.system()),
+            )
+            // ACTIONS
+            .add_system(responsive_buttons.system().label(CommonLabels::Action))
             // Must overwrite default button responsivity for selected input mode
             .add_system(
                 show_selected_input_mode
                     .system()
-                    .after("input")
-                    .after("responsive_buttons"),
+                    .after(CommonLabels::Action),
             );
     }
 }

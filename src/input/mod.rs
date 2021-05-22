@@ -1,5 +1,7 @@
 use bevy::prelude::*;
 
+use crate::CommonLabels;
+
 pub mod actions;
 pub mod input_mode;
 // These are low-level, and shouldn't need to be exposed
@@ -8,8 +10,6 @@ mod mouse;
 
 pub struct InteractionPlugin;
 
-// QUALITY: use typed system labels instead of strings
-// QUALITY: use system sets and label them all at once
 impl Plugin for InteractionPlugin {
     fn build(&self, app: &mut AppBuilder) {
         app.add_event::<mouse::CellClick>()
@@ -18,29 +18,28 @@ impl Plugin for InteractionPlugin {
             .init_resource::<mouse::cell_index::CellIndex>()
             .init_resource::<input_mode::InputMode>()
             // Should run before input to ensure mapping from position to cell is correct
-            .add_system(mouse::cell_index::index_cells.system().before("input"))
-            // Various input systems
-            .add_system(mouse::cell_click.system().label("input"))
-            .add_system(keyboard::select_all.system().label("input"))
             .add_system(
-                keyboard::cell_input::cell_keyboard_input
+                mouse::cell_index::index_cells
                     .system()
-                    .label("input"),
+                    .before(CommonLabels::Input),
             )
-            .add_system(keyboard::erase_selected_cells.system().label("input"))
-            .add_system(keyboard::swap_input_mode.system().label("input"))
-            // Should immediately run to process input events after
-            .add_system(
-                actions::handle_clicks
-                    .system()
-                    .label("actions")
-                    .after("input"),
+            // INPUT HANDLING
+            .add_system_set(
+                SystemSet::new()
+                    .label(CommonLabels::Input)
+                    .with_system(mouse::cell_click.system())
+                    .with_system(keyboard::select_all.system())
+                    .with_system(keyboard::cell_input::cell_keyboard_input.system())
+                    .with_system(keyboard::erase_selected_cells.system())
+                    .with_system(keyboard::swap_input_mode.system()),
             )
-            .add_system(
-                actions::set_cell_value
-                    .system()
-                    .label("actions")
-                    .after("input"),
+            // ACTION HANDLING
+            .add_system_set(
+                SystemSet::new()
+                    .label(CommonLabels::Action)
+                    .after(CommonLabels::Input)
+                    .with_system(actions::handle_clicks.system())
+                    .with_system(actions::set_cell_value.system()),
             );
     }
 }

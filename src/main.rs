@@ -16,3 +16,9 @@ fn main() {
         .add_system(bevy::input::system::exit_on_esc_system.system())
         .run();
 }
+
+#[derive(SystemLabel, Clone, Hash, Copy, PartialEq, Eq, Debug)]
+enum CommonLabels {
+    Input,
+    Action,
+}

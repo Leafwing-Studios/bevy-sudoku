@@ -17,13 +17,18 @@ impl Plugin for GenerationPlugin {
         app.init_resource::<InitialPuzzle>()
             .init_resource::<CompletePuzzle>()
             .add_startup_system(first_sudoku.system())
-            .add_system(fill_puzzle.system().label("fill_puzzle"))
+            .add_system(fill_puzzle.system().label(GenerationLabels::FillPuzzle))
             // Must occur before we fill the puzzle to ensure
             // that the new puzzle has been generated before we attempt to fill it
-            .add_system(new_sudoku.system().before("fill_puzzle"))
+            .add_system(new_sudoku.system().before(GenerationLabels::FillPuzzle))
             .add_system(reset_sudoku.system())
             .add_system(solve_sudoku.system());
     }
+}
+
+#[derive(SystemLabel, Clone, Hash, Copy, PartialEq, Eq, Debug)]
+enum GenerationLabels {
+    FillPuzzle,
 }
 
 // QUALITY: refactor to share data with CompletePuzzle struct
